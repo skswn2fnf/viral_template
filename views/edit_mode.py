@@ -64,17 +64,27 @@ def render_edit_mode():
                             st.session_state['products'] = [new_product]
                         else:
                             st.session_state['products'].append(new_product)
-                        st.success("제품 추가 완료!")
+                        st.success(f"제품 추가 완료! (총 {len(st.session_state['products'])}개)")
                         time.sleep(1) # 성공 메시지 보여주기
                         st.rerun()
                     else:
                         st.error("제품을 찾을 수 없습니다.")
 
-            # 제품 리스트 렌더링
+            # 제품 리스트 렌더링 (최신순 or 등록순)
             products = st.session_state['products']
+            
+            if len(products) > 0:
+                st.markdown(f"**등록된 제품: {len(products)}개**")
+                
             for idx, p in enumerate(products):
-                st.markdown(f"**Product {idx + 1}**")
-                with st.container(border=True):
+                # 제품명으로 아코디언 제목 설정 (없으면 Product N)
+                title = p['name'] if p['name'] else f"Product {idx + 1}"
+                title_prefix = "★ " if p.get('isMain', False) else ""
+                
+                # 아코디언으로 감싸서 공간 절약 (마지막에 추가된 것은 열어두기)
+                is_expanded = (idx == len(products) - 1)
+                
+                with st.expander(f"{title_prefix}{title}", expanded=is_expanded):
                     # 이미지와 내용을 나누기 위한 컬럼 (1:4 비율)
                     img_col, content_col = st.columns([1, 4])
                     
@@ -88,6 +98,8 @@ def render_edit_mode():
                         # 메인 제품 체크 및 삭제 버튼
                         h_col1, h_col2 = st.columns([4, 1])
                         p['isMain'] = h_col1.checkbox("★ 메인 제품으로 설정", value=p.get('isMain', False), key=f"main_{p['id']}")
+                        
+                        # 삭제 버튼 로직 개선
                         if h_col2.button("삭제", key=f"del_{p['id']}"):
                             if len(products) > 1:
                                 products.pop(idx)

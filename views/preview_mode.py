@@ -9,12 +9,9 @@ def generate_shareable_html(state):
     basic = state['basic_info']
     platform = state['platform']
     
-    platform_colors = {
-        'blog': '#28a745',
-        'instagram': '#833ab4',
-        'youtube': '#ff0000'
-    }
-    color = platform_colors.get(platform, '#6c757d')
+    # 모노톤 색상 (진회색)
+    color = '#343a40'
+    accent_color = '#1976d2'  # 파란색 하이라이트
     
     platform_names = {
         'blog': '블로그',
@@ -31,72 +28,84 @@ def generate_shareable_html(state):
         sub_keywords = " ".join([f'<span class="keyword sub">{k["text"]}</span>' for k in blog['sub_keywords'] if k['text']])
         
         platform_section = f"""
-        <div class="section">
-            <h2>🏷️ 키워드 설정</h2>
-            <div class="keyword-group">
-                <strong>필수 제목 키워드</strong>
-                <div class="keywords">{title_keywords}</div>
-            </div>
-            <div class="keyword-group">
-                <strong>서브 키워드</strong>
-                <div class="keywords">{sub_keywords}</div>
+        <div class="section-wrapper">
+            <div class="section-header">🏷️ 키워드 설정</div>
+            <div class="section-body">
+                <div class="keyword-group">
+                    <strong>필수 제목 키워드</strong>
+                    <div class="keywords">{title_keywords}</div>
+                </div>
+                <div class="keyword-group">
+                    <strong>서브 키워드</strong>
+                    <div class="keywords">{sub_keywords}</div>
+                </div>
             </div>
         </div>
-        <div class="section">
-            <h2>🖼️ 활용 이미지</h2>
-            <ul>
-                <li>{basic['model_name']} {blog['images']['model_note']} <strong>{blog['images']['model_count']}장</strong> 이상</li>
-                {'<li>SNS 캡쳐 <strong>' + str(blog['images']['sns_count']) + '장</strong> 이상</li>' if blog['images']['sns_url'] else ''}
-            </ul>
+        <div class="section-wrapper">
+            <div class="section-header">🖼️ 활용 이미지</div>
+            <div class="section-body">
+                <ul>
+                    <li>{basic['model_name']} {blog['images']['model_note']} <strong>{blog['images']['model_count']}장</strong> 이상</li>
+                    {'<li>SNS 캡쳐 <strong>' + str(blog['images']['sns_count']) + '장</strong> 이상</li>' if blog['images']['sns_url'] else ''}
+                </ul>
+            </div>
         </div>
-        <div class="section">
-            <h2>📖 스토리라인</h2>
-            <p><strong>타겟</strong>: {blog['story']['target_audience']}</p>
-            {'<p><strong>컨셉</strong>: ' + blog['story']['campaign_concept'] + '</p>' if blog['story']['campaign_concept'] else ''}
+        <div class="section-wrapper">
+            <div class="section-header">📖 스토리라인</div>
+            <div class="section-body">
+                <p><strong>타겟</strong>: {blog['story']['target_audience']}</p>
+                {'<p><strong>컨셉</strong>: ' + blog['story']['campaign_concept'] + '</p>' if blog['story']['campaign_concept'] else ''}
+            </div>
         </div>
         """
     
     elif platform == 'instagram':
         insta = state['insta_data']
         platform_section = f"""
-        <div class="section">
-            <h2>📐 콘텐츠 스펙</h2>
-            <div class="metrics">
-                <div class="metric">
-                    <span class="label">유형</span>
-                    <span class="value">{insta['content_type']}</span>
+        <div class="section-wrapper">
+            <div class="section-header">📐 콘텐츠 스펙</div>
+            <div class="section-body">
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="label">유형</span>
+                        <span class="value">{insta['content_type']}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">사이즈</span>
+                        <span class="value">{insta['content_size']}</span>
+                    </div>
                 </div>
-                <div class="metric">
-                    <span class="label">사이즈</span>
-                    <span class="value">{insta['content_size']}</span>
-                </div>
+                <p><strong>멘션</strong>: <code>{insta['mentions']}</code></p>
             </div>
-            <p><strong>멘션</strong>: <code>{insta['mentions']}</code></p>
         </div>
-        {'<div class="section"><h2>🎨 톤앤매너</h2><div class="info-box">' + insta['tone_and_manner'] + '</div></div>' if insta['tone_and_manner'] else ''}
-        <div class="section highlight-pink">
-            <h2>♻️ 2차 활용</h2>
-            <p><strong>{insta['reuse_clause']}</strong></p>
+        {'<div class="section-wrapper"><div class="section-header">🎨 톤앤매너</div><div class="section-body"><div class="info-box">' + insta['tone_and_manner'] + '</div></div></div>' if insta['tone_and_manner'] else ''}
+        <div class="section-wrapper highlight-blue">
+            <div class="section-header accent">♻️ 2차 활용</div>
+            <div class="section-body accent">
+                <p><strong>{insta['reuse_clause']}</strong></p>
+            </div>
         </div>
         """
     
     elif platform == 'youtube':
         yt = state['youtube_data']
         platform_section = f"""
-        <div class="section">
-            <h2>🎬 콘텐츠 스펙</h2>
-            <div class="metrics">
-                <div class="metric">
-                    <span class="label">유형</span>
-                    <span class="value">{yt['content_type']}</span>
-                </div>
-                <div class="metric">
-                    <span class="label">권장 길이</span>
-                    <span class="value">{yt['duration'] or '자유'}</span>
+        <div class="section-wrapper">
+            <div class="section-header">🎬 콘텐츠 스펙</div>
+            <div class="section-body">
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="label">유형</span>
+                        <span class="value">{yt['content_type']}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="label">권장 길이</span>
+                        <span class="value">{yt['duration'] or '자유'}</span>
+                    </div>
                 </div>
             </div>
         </div>
-        {'<div class="section"><h2>💬 희망 메시지</h2><div class="info-box">' + yt['key_message'] + '</div></div>' if yt['key_message'] else ''}
+        {'<div class="section-wrapper"><div class="section-header">💬 희망 메시지</div><div class="section-body"><div class="info-box">' + yt['key_message'] + '</div></div></div>' if yt['key_message'] else ''}
         """
     
     # 제품 정보 HTML 생성
@@ -186,28 +195,38 @@ def generate_shareable_html(state):
             padding: 30px;
         }}
         .deadline {{
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-            color: #856404;
+            background: #e3f2fd;
+            border-left: 4px solid {accent_color};
+            color: #1565c0;
             padding: 15px 20px;
-            border-radius: 10px;
+            border-radius: 8px;
             margin-bottom: 25px;
             font-weight: 500;
         }}
-        .section {{
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 12px;
+        .section-wrapper {{
             margin-bottom: 20px;
         }}
-        .section.highlight-pink {{
-            background: #fff0f3;
-            border: 1px solid #ffccd5;
+        .section-header {{
+            background: #495057;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            font-size: 1.05em;
         }}
-        .section h2 {{
-            font-size: 1.2em;
-            margin-bottom: 15px;
-            color: #333;
+        .section-header.accent {{
+            background: {accent_color};
+        }}
+        .section-body {{
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }}
+        .section-body.accent {{
+            background: #e3f2fd;
+            border-color: #90caf9;
         }}
         .keyword-group {{
             margin-bottom: 15px;
@@ -249,7 +268,7 @@ def generate_shareable_html(state):
         .metric .value {{
             font-size: 1.3em;
             font-weight: 700;
-            color: {color};
+            color: #343a40;
         }}
         .info-box {{
             background: #e3f2fd;
@@ -258,29 +277,50 @@ def generate_shareable_html(state):
             border-radius: 0 8px 8px 0;
         }}
         .legal-section {{
-            background: #e9ecef;
-            padding: 25px;
-            border-radius: 12px;
             margin-bottom: 20px;
         }}
-        .legal-section h3 {{
-            margin-bottom: 15px;
+        .legal-header {{
+            background: {accent_color};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            font-size: 1.05em;
         }}
-        .legal-section code {{
+        .legal-body {{
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #90caf9;
+            border-top: none;
+        }}
+        .legal-body code {{
             display: block;
             background: white;
             padding: 15px;
             border-radius: 8px;
             font-family: inherit;
             font-size: 0.95em;
+            color: #1565c0;
+            font-weight: 500;
         }}
         .products-section {{
-            background: #f1f3f5;
-            padding: 25px;
-            border-radius: 12px;
-        }}
-        .products-section h2 {{
             margin-bottom: 20px;
+        }}
+        .products-header {{
+            background: #495057;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            font-size: 1.05em;
+        }}
+        .products-body {{
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #dee2e6;
+            border-top: none;
         }}
         .product-card {{
             display: flex;
@@ -337,7 +377,7 @@ def generate_shareable_html(state):
         .product-link {{
             display: inline-block;
             margin-top: 10px;
-            color: {color};
+            color: {accent_color};
             text-decoration: none;
             font-weight: 500;
         }}
@@ -450,16 +490,28 @@ def generate_shareable_html(state):
                 📅 <strong>포스팅 기한</strong>: {basic['posting_date']} {basic['posting_time']} 이후
             </div>
             
+            {f'''<div class="section-wrapper">
+                <div class="section-header">🖼️ 메인 화보 (썸네일 지정)</div>
+                <div class="section-body" style="text-align: center;">
+                    <img src="{basic.get('main_image', '')}" alt="메인 화보" style="max-width: 100%; border-radius: 8px;">
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">⬆️ 이 이미지를 썸네일로 사용해주세요</p>
+                </div>
+            </div>''' if basic.get('main_image') else ''}
+            
             {platform_section}
             
             <div class="legal-section">
-                <h3>⚖️ 필수 기재 문구</h3>
-                <code>{final_legal}</code>
+                <div class="legal-header">⚖️ 필수 기재 문구</div>
+                <div class="legal-body">
+                    <code>{final_legal}</code>
+                </div>
             </div>
             
             <div class="products-section">
-                <h2>📦 제품 정보</h2>
-                {products_html}
+                <div class="products-header">📦 제품 정보</div>
+                <div class="products-body">
+                    {products_html}
+                </div>
             </div>
         </div>
         
@@ -499,38 +551,57 @@ def render_preview_mode():
             help="외부 공유용 HTML 파일을 다운로드합니다"
         )
     
-    # 스타일링 및 헤더
-    platform_colors = {
-        'blog': 'green',
-        'instagram': 'purple',
-        'youtube': 'red'
+    # 스타일링 및 헤더 (모노톤)
+    platform_labels = {
+        'blog': '블로그',
+        'instagram': '인스타그램',
+        'youtube': '유튜브'
     }
-    color = platform_colors.get(platform, 'gray')
     
     st.markdown(f"""
-    <div style="background-color: {color}; padding: 20px; border-radius: 10px; color: white; margin-bottom: 20px;">
-        <h1>{basic['brand_name']}</h1>
-        <h3>{basic['model_name']} {basic['campaign_round']} | {platform.upper()} 가이드라인</h3>
-        <span style="background: rgba(255,255,255,0.3); padding: 5px 10px; border-radius: 15px; font-size: 0.8em;">
+    <div style="background-color: #343a40; padding: 20px; border-radius: 10px; color: white; margin-bottom: 20px;">
+        <h1 style="margin:0 0 8px 0;">{basic['brand_name']}</h1>
+        <h3 style="margin:0 0 12px 0; font-weight: 400; opacity: 0.9;">{basic['model_name']} {basic['campaign_round']} | {platform_labels.get(platform, platform).upper()} 가이드라인</h3>
+        <span style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 15px; font-size: 0.85em;">
             {'📢 오피셜' if basic['campaign_type'] == 'official' else '🔒 히든'}
         </span>
     </div>
     """, unsafe_allow_html=True)
 
-    # 포스팅 기한 (배경 적용)
+    # 포스팅 기한 (파란색 하이라이트)
     st.markdown(f"""
-    <div style="background-color: #fff3cd; padding: 15px; border-radius: 10px; margin-bottom: 20px; color: #856404; border: 1px solid #ffeeba;">
+    <div style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px; color: #1565c0; border-left: 4px solid #1976d2;">
         📅 <strong>포스팅 기한</strong>: {basic['posting_date']} {basic['posting_time']} 이후
     </div>
     """, unsafe_allow_html=True)
 
+    # 메인 화보 이미지 (썸네일)
+    if basic.get('main_image'):
+        st.markdown("""
+        <div style="background-color: #495057; color: white; padding: 10px 15px; border-radius: 6px 6px 0 0; margin-top: 15px; font-weight: 600;">
+            🖼️ 메인 화보 (썸네일 지정)
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 20px; border: 1px solid #dee2e6; border-top: none; text-align: center;">', unsafe_allow_html=True)
+        st.image(basic['main_image'], use_container_width=True)
+        st.caption("⬆️ 이 이미지를 썸네일로 사용해주세요")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # 섹션 헤더 스타일 함수
+    def section_title(icon, title):
+        st.markdown(f"""
+        <div style="background-color: #495057; color: white; padding: 10px 15px; border-radius: 6px 6px 0 0; margin-top: 15px; font-weight: 600;">
+            {icon} {title}
+        </div>
+        """, unsafe_allow_html=True)
+    
     # 1. 플랫폼별 상세 가이드 (상단)
     if platform == 'blog':
         blog = state['blog_data']
         
         # 키워드 섹션
-        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">', unsafe_allow_html=True)
-        st.subheader("🏷️ 키워드 설정")
+        section_title("🏷️", "키워드 설정")
+        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
         st.markdown("**필수 제목 키워드**")
         st.markdown(" ".join([f"`{k['text']}`" for k in blog['title_keywords'] if k['text']]))
         st.markdown("**서브 키워드**")
@@ -538,16 +609,16 @@ def render_preview_mode():
         st.markdown('</div>', unsafe_allow_html=True)
         
         # 활용 이미지 섹션
-        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">', unsafe_allow_html=True)
-        st.subheader("🖼️ 활용 이미지")
+        section_title("🖼️", "활용 이미지")
+        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
         st.markdown(f"- {basic['model_name']} {blog['images']['model_note']} **{blog['images']['model_count']}장** 이상")
         if blog['images']['sns_url']:
             st.markdown(f"- SNS 캡쳐 **{blog['images']['sns_count']}장** 이상")
         st.markdown('</div>', unsafe_allow_html=True)
         
         # 스토리라인 섹션
-        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">', unsafe_allow_html=True)
-        st.subheader("📖 스토리라인")
+        section_title("📖", "스토리라인")
+        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
         st.markdown(f"**타겟**: {blog['story']['target_audience']}")
         if blog['story']['campaign_concept']:
             st.markdown(f"**컨셉**: {blog['story']['campaign_concept']}")
@@ -557,8 +628,8 @@ def render_preview_mode():
         insta = state['insta_data']
         
         # 콘텐츠 스펙
-        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">', unsafe_allow_html=True)
-        st.subheader("📐 콘텐츠 스펙")
+        section_title("📐", "콘텐츠 스펙")
+        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         c1.metric("유형", insta['content_type'])
         c2.metric("사이즈", insta['content_size'])
@@ -567,14 +638,14 @@ def render_preview_mode():
         
         # 톤앤매너
         if insta['tone_and_manner']:
-            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">', unsafe_allow_html=True)
-            st.subheader("🎨 톤앤매너")
+            section_title("🎨", "톤앤매너")
+            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
             st.info(insta['tone_and_manner'])
             st.markdown('</div>', unsafe_allow_html=True)
             
-        # 2차 활용
-        st.markdown('<div style="background-color: #fff0f3; padding: 20px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #ffccd5;">', unsafe_allow_html=True)
-        st.subheader("♻️ 2차 활용")
+        # 2차 활용 (파란색 하이라이트)
+        section_title("♻️", "2차 활용")
+        st.markdown('<div style="background-color: #e3f2fd; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #90caf9; border-top: none;">', unsafe_allow_html=True)
         st.markdown(f"**{insta['reuse_clause']}**")
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -582,31 +653,33 @@ def render_preview_mode():
         yt = state['youtube_data']
         
         # 콘텐츠 스펙
-        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">', unsafe_allow_html=True)
-        st.subheader("🎬 콘텐츠 스펙")
+        section_title("🎬", "콘텐츠 스펙")
+        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         c1.metric("유형", yt['content_type'])
         c2.metric("권장 길이", yt['duration'] or "자유")
         st.markdown('</div>', unsafe_allow_html=True)
         
         if yt['key_message']:
-            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">', unsafe_allow_html=True)
-            st.subheader("💬 희망 메시지")
+            section_title("💬", "희망 메시지")
+            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
             st.info(yt['key_message'])
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. 법적 문구
+    # 2. 법적 문구 (파란색 하이라이트 - 중요!)
     final_legal = state['legal_text'].replace('{브랜드명}', basic['brand_name'])
     st.markdown(f"""
-    <div style="background-color: #e9ecef; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <h3 style="margin-top:0;">⚖️ 필수 기재 문구</h3>
-        <code style="display:block; padding:15px; background:white; border-radius:5px;">{final_legal}</code>
+    <div style="background-color: #1976d2; color: white; padding: 10px 15px; border-radius: 6px 6px 0 0; margin-top: 15px; font-weight: 600;">
+        ⚖️ 필수 기재 문구
+    </div>
+    <div style="background-color: #e3f2fd; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 20px; border: 1px solid #90caf9; border-top: none;">
+        <code style="display:block; padding:15px; background:white; border-radius:5px; color: #1565c0; font-weight: 500;">{final_legal}</code>
     </div>
     """, unsafe_allow_html=True)
 
     # 3. 제품 정보 (하단)
-    st.markdown('<div style="background-color: #f1f3f5; padding: 20px; border-radius: 10px; margin-bottom: 20px;">', unsafe_allow_html=True)
-    st.subheader("📦 제품 정보")
+    section_title("📦", "제품 정보")
+    st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 20px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
     
     valid_products = [p for p in state['products'] if p.get('name') or p.get('productCode')]
     

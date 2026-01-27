@@ -1,10 +1,130 @@
 import streamlit as st
 import time
+import base64
+import json
+from datetime import datetime
 from data.product_db import fetch_product_info
+
+def get_saveable_state():
+    """저장 가능한 상태 데이터를 딕셔너리로 반환"""
+    return {
+        'basic_info': st.session_state.get('basic_info', {}),
+        'platform': st.session_state.get('platform', 'blog'),
+        'blog_data': st.session_state.get('blog_data', {}),
+        'insta_data': st.session_state.get('insta_data', {}),
+        'youtube_data': st.session_state.get('youtube_data', {}),
+        'products': st.session_state.get('products', []),
+        'legal_text': st.session_state.get('legal_text', ''),
+        'saved_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+def load_state_from_json(json_data):
+    """JSON 데이터로부터 상태 복원"""
+    try:
+        data = json.loads(json_data)
+        if 'basic_info' in data:
+            st.session_state['basic_info'] = data['basic_info']
+        if 'platform' in data:
+            st.session_state['platform'] = data['platform']
+        if 'blog_data' in data:
+            st.session_state['blog_data'] = data['blog_data']
+        if 'insta_data' in data:
+            st.session_state['insta_data'] = data['insta_data']
+        if 'youtube_data' in data:
+            st.session_state['youtube_data'] = data['youtube_data']
+        if 'products' in data:
+            st.session_state['products'] = data['products']
+        if 'legal_text' in data:
+            st.session_state['legal_text'] = data['legal_text']
+        return True, data.get('saved_at', '알 수 없음')
+    except Exception as e:
+        return False, str(e)
+
+def image_to_data_url(uploaded_file):
+    """업로드된 이미지를 base64 data URL로 변환"""
+    if uploaded_file is not None:
+        bytes_data = uploaded_file.getvalue()
+        b64 = base64.b64encode(bytes_data).decode()
+        file_type = uploaded_file.type
+        return f"data:{file_type};base64,{b64}"
+    return None
+
+def section_header(icon, title):
+    """진회색 배경 + 화이트 텍스트 섹션 헤더"""
+    st.markdown(f"""
+    <div style="background-color: #343a40; color: white; padding: 12px 16px; border-radius: 8px; margin: 20px 0 10px 0; font-weight: 600; font-size: 1.1em;">
+        {icon} {title}
+    </div>
+    """, unsafe_allow_html=True)
 
 def render_edit_mode():
     st.title("✨ 바이럴 가이드라인 템플릿")
     st.caption("플랫폼별 맞춤 가이드라인을 빠르게 작성하세요")
+
+    # 저장/불러오기 섹션
+    st.markdown("""
+    <div style="background-color: #fff3cd; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 10px;">
+        <strong>💾 중간 저장은 여기에서 하세요!</strong>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    with st.expander("💾 저장 / 불러오기 사용방법", expanded=False):
+        st.markdown("""
+        **📌 사용 방법 안내**
+        
+        1. 작성 중인 내용은 **JSON 파일로 필수 저장**해주세요.  
+           그렇지 않으면 작성 중인 내용이 **모두 날아갑니다.**
+        
+        2. 다시 작성하실 때, 저장한 **JSON 파일을 오른쪽 공간에 업로드**해주세요.
+        """)
+        st.markdown("---")
+        
+        save_col1, save_col2 = st.columns(2)
+        
+        with save_col1:
+            st.markdown("**📥 작업 내용 저장**")
+            st.caption("현재 작성 중인 내용을 JSON 파일로 저장합니다")
+            
+            # 저장 데이터 생성
+            save_data = get_saveable_state()
+            json_str = json.dumps(save_data, ensure_ascii=False, indent=2)
+            
+            # 파일명 생성
+            brand_name = st.session_state.get('basic_info', {}).get('brand_name', 'template')
+            file_name = f"{brand_name}_가이드라인_{datetime.now().strftime('%Y%m%d_%H%M')}.json"
+            file_name = file_name.replace(" ", "_")
+            
+            st.download_button(
+                label="💾 JSON으로 저장",
+                data=json_str,
+                file_name=file_name,
+                mime="application/json",
+                use_container_width=True
+            )
+        
+        with save_col2:
+            st.markdown("**📤 저장된 작업 불러오기**")
+            st.caption("이전에 저장한 JSON 파일을 불러옵니다")
+            
+            uploaded_json = st.file_uploader(
+                "JSON 파일 업로드",
+                type=['json'],
+                key="load_json_file",
+                label_visibility="collapsed"
+            )
+            
+            if uploaded_json:
+                if st.button("📂 불러오기 실행", use_container_width=True):
+                    json_content = uploaded_json.read().decode('utf-8')
+                    success, info = load_state_from_json(json_content)
+                    if success:
+                        st.success(f"✅ 불러오기 완료! (저장 시간: {info})")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ 불러오기 실패: {info}")
+    
+    st.markdown("---")
 
     # 플랫폼 선택 (Tabs)
     platforms = ["blog", "instagram", "youtube"]
@@ -28,8 +148,13 @@ def render_edit_mode():
 
     with col1:
         # 1. 기본 정보 섹션
-        with st.expander("📄 기본 정보", expanded=True):
+        section_header("📄", "기본 정보")
+        with st.expander("상세 설정", expanded=True):
             basic = st.session_state['basic_info']
+            
+            # main_image 키가 없으면 추가 (기존 데이터 호환)
+            if 'main_image' not in basic:
+                basic['main_image'] = ''
             
             # 캠페인 타입 토글
             c_type = st.radio("캠페인 타입", ["official", "hidden"], 
@@ -42,13 +167,45 @@ def render_edit_mode():
             basic['brand_name'] = b_col1.text_input("브랜드명", value=basic['brand_name'])
             basic['model_name'] = b_col2.text_input("모델/인플루언서", value=basic['model_name'], placeholder="예: 박지현")
             
+            # 메인 화보 이미지 업로드
+            st.markdown("---")
+            st.markdown("**🖼️ 메인 화보 이미지** (썸네일 / 컨텐츠 상단 노출)")
+            
+            main_img_col1, main_img_col2 = st.columns([1, 2])
+            
+            with main_img_col1:
+                if basic.get('main_image'):
+                    st.image(basic['main_image'], use_container_width=True)
+                    if st.button("🗑️ 이미지 삭제", key="del_main_img", use_container_width=True):
+                        basic['main_image'] = ''
+                        st.rerun()
+                else:
+                    main_img_upload = st.file_uploader(
+                        "메인 화보 업로드",
+                        type=['png', 'jpg', 'jpeg', 'webp'],
+                        key="main_image_upload",
+                        label_visibility="collapsed"
+                    )
+                    if main_img_upload:
+                        data_url = image_to_data_url(main_img_upload)
+                        if data_url:
+                            basic['main_image'] = data_url
+                            st.rerun()
+                    st.caption("PNG, JPG, WEBP")
+            
+            with main_img_col2:
+                st.info("💡 이 이미지가 가이드라인 상단에 메인컷으로 표시됩니다.\n\n인플루언서가 썸네일로 사용할 대표 화보를 업로드해주세요.")
+            
+            st.markdown("---")
+            
             b_col3, b_col4, b_col5 = st.columns(3)
             basic['campaign_round'] = b_col3.text_input("캠페인 회차", value=basic['campaign_round'])
             basic['posting_date'] = b_col4.text_input("포스팅 날짜", value=basic['posting_date'], placeholder="YYYY-MM-DD")
             basic['posting_time'] = b_col5.text_input("포스팅 시간", value=basic['posting_time'], placeholder="13:00")
 
         # 2. 제품 정보 섹션
-        with st.expander("📦 제품 정보", expanded=True):
+        section_header("📦", "제품 정보")
+        with st.expander("제품 목록", expanded=True):
             st.info("🔗 Sergio Tacchini 공식몰 제품 URL을 입력하면 정보가 자동 채워집니다.")
             
             url_col1, url_col2 = st.columns([3, 1])
@@ -91,8 +248,24 @@ def render_edit_mode():
                     with img_col:
                         if p.get('imageUrl'):
                             st.image(p['imageUrl'], use_container_width=True)
+                            # 이미지 삭제 버튼
+                            if st.button("🗑️ 이미지 삭제", key=f"del_img_{p['id']}", use_container_width=True):
+                                p['imageUrl'] = ''
+                                st.rerun()
                         else:
-                            st.container(height=100, border=True).markdown("<div style='text-align:center; padding-top:30px; color:#ccc;'>No Image</div>", unsafe_allow_html=True)
+                            # 이미지 업로드
+                            uploaded_file = st.file_uploader(
+                                "이미지 업로드",
+                                type=['png', 'jpg', 'jpeg', 'webp'],
+                                key=f"upload_{p['id']}",
+                                label_visibility="collapsed"
+                            )
+                            if uploaded_file:
+                                data_url = image_to_data_url(uploaded_file)
+                                if data_url:
+                                    p['imageUrl'] = data_url
+                                    st.rerun()
+                            st.caption("PNG, JPG, WEBP")
 
                     with content_col:
                         # 메인 제품 체크 및 삭제 버튼
@@ -137,6 +310,7 @@ def render_edit_mode():
         platform = st.session_state['platform']
         
         if platform == 'blog':
+            section_header("📖", "블로그 설정")
             blog = st.session_state['blog_data']
             with st.expander("🏷️ 키워드 설정", expanded=True):
                 st.caption("필수 제목 키워드 (콤마로 구분)")
@@ -166,6 +340,7 @@ def render_edit_mode():
                 blog['story']['campaign_concept'] = st.text_input("캠페인 컨셉", value=blog['story']['campaign_concept'])
 
         elif platform == 'instagram':
+            section_header("📷", "인스타그램 설정")
             insta = st.session_state['insta_data']
             with st.expander("📐 콘텐츠 스펙", expanded=True):
                 i_col1, i_col2 = st.columns(2)
@@ -183,6 +358,7 @@ def render_edit_mode():
                 insta['reuse_clause'] = st.text_area("2차 활용 문구", value=insta['reuse_clause'])
 
         elif platform == 'youtube':
+            section_header("🎬", "유튜브 설정")
             yt = st.session_state['youtube_data']
             with st.expander("🎬 콘텐츠 스펙", expanded=True):
                 y_col1, y_col2 = st.columns(2)
@@ -195,7 +371,8 @@ def render_edit_mode():
                 yt['required_mentions'] = st.text_area("필수 멘트", value=yt['required_mentions'])
 
         # 4. 공통 법적 문구
-        with st.expander("⚖️ 필수 기재 문구", expanded=True):
+        section_header("⚖️", "필수 기재 문구")
+        with st.expander("문구 설정", expanded=True):
             st.session_state['legal_text'] = st.text_area("법적 문구", value=st.session_state['legal_text'])
             st.caption("💡 '{브랜드명}'은 자동으로 치환됩니다")
 

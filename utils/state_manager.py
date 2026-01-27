@@ -23,7 +23,8 @@ def init_session_state():
                 'campaign_round': '2차화보',
                 'posting_date': '',
                 'posting_time': '13:00',
-                'campaign_type': 'official'
+                'campaign_type': 'official',
+                'main_image': ''  # 메인 화보 이미지 (썸네일)
             }
             
         # Blog Data

@@ -116,11 +116,25 @@ def process_image_from_url(img_url, referer=None):
         if img_response.status_code != 200:
             return None
         img = Image.open(BytesIO(img_response.content))
-        if img.mode in ("RGBA", "P"):
+        
+        # 투명 배경을 흰색으로 처리
+        if img.mode in ("RGBA", "P", "LA"):
+            # 흰색 배경 이미지 생성
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "P":
+                img = img.convert("RGBA")
+            # 알파 채널이 있으면 합성
+            if img.mode in ("RGBA", "LA"):
+                background.paste(img, mask=img.split()[-1])  # 알파 채널을 마스크로 사용
+            else:
+                background.paste(img)
+            img = background
+        elif img.mode != "RGB":
             img = img.convert("RGB")
+            
         img.thumbnail((300, 300))
         buffered = BytesIO()
-        img.save(buffered, format="JPEG", quality=80)
+        img.save(buffered, format="JPEG", quality=85)
         img_str = base64.b64encode(buffered.getvalue()).decode()
         return f"data:image/jpeg;base64,{img_str}"
     except Exception as e:
@@ -133,6 +147,8 @@ def crawl_product_page(url, product_code):
     세르지오 타키니, 듀베티카 등 다양한 쇼핑몰을 지원합니다.
     """
     try:
+        import json as json_module
+        
         referer = get_referer_from_url(url)
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -147,12 +163,31 @@ def crawl_product_page(url, product_code):
             
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # 1. 제품명 추출 (다양한 방법 시도)
+        # __NEXT_DATA__ 에서 데이터 추출 시도 (세르지오타키니, 듀베티카 등 Next.js 사이트)
+        next_data_script = soup.find('script', id='__NEXT_DATA__')
+        next_data = None
+        if next_data_script and next_data_script.string:
+            try:
+                next_data = json_module.loads(next_data_script.string)
+                next_data = next_data.get('props', {}).get('pageProps', {}).get('data', {})
+            except:
+                next_data = None
+        
+        # 1. 제품명 추출
         name = ""
+        # __NEXT_DATA__에서 추출
+        if next_data:
+            name_data = next_data.get('name', {})
+            if isinstance(name_data, dict):
+                name = name_data.get('pc', '') or name_data.get('mobile', '')
+            elif isinstance(name_data, str):
+                name = name_data
+        
         # og:title 시도
-        og_title = soup.find('meta', property='og:title')
-        if og_title and og_title.get('content'):
-            name = og_title['content']
+        if not name:
+            og_title = soup.find('meta', property='og:title')
+            if og_title and og_title.get('content'):
+                name = og_title['content']
         
         # h1 태그 시도
         if not name:
@@ -171,14 +206,23 @@ def crawl_product_page(url, product_code):
         if name:
             name = name.split(' - ')[0].split(' | ')[0].strip()
         
-        # 2. 가격 추출 (다양한 방법 시도)
+        # 2. 가격 추출
         price = ""
+        # __NEXT_DATA__에서 추출
+        if next_data:
+            price_data = next_data.get('price', {})
+            if isinstance(price_data, dict):
+                price_val = price_data.get('discounted') or price_data.get('original')
+                if price_val:
+                    price = f"{price_val:,}"
+        
         # og:description에서 가격 찾기
-        og_desc = soup.find('meta', property='og:description')
-        if og_desc and og_desc.get('content'):
-            price_match = re.search(r'(\d{1,3}(?:,\d{3})+)원?', og_desc['content'])
-            if price_match:
-                price = price_match.group(1)
+        if not price:
+            og_desc = soup.find('meta', property='og:description')
+            if og_desc and og_desc.get('content'):
+                price_match = re.search(r'(\d{1,3}(?:,\d{3})+)원?', og_desc['content'])
+                if price_match:
+                    price = price_match.group(1)
         
         # 가격 클래스에서 찾기
         if not price:
@@ -200,7 +244,126 @@ def crawl_product_page(url, product_code):
                     price = p
                     break
                     
-        # 3. 특징 추출 (다양한 방법 시도)
+        # 3. 컬러 추출 (__NEXT_DATA__ 우선)
+        colors = []
+        
+        # __NEXT_DATA__에서 컬러 추출
+        if next_data:
+            color_options = next_data.get('colorOptions', [])
+            for opt in color_options:
+                color_name = opt.get('name', '')
+                if color_name and color_name not in colors:
+                    colors.append(color_name)
+        
+        # 방법 1: 컬러 관련 select/option에서 추출
+        if not colors:
+            color_selectors = [
+                'select[name*="color"] option',
+                'select[name*="Color"] option',
+                'select[id*="color"] option',
+                '[class*="color"] option',
+                '[class*="Color"] option'
+            ]
+            for selector in color_selectors:
+                options = soup.select(selector)
+                for opt in options:
+                    text = opt.get_text().strip()
+                    value = opt.get('value', '')
+                    if text and text not in ['선택', '컬러선택', '색상선택', '- 선택 -', '']:
+                        colors.append(text)
+                if colors:
+                    break
+        
+        # 방법 2: 컬러 버튼/라벨에서 추출
+        if not colors:
+            color_elements = soup.select('[class*="color"] li, [class*="color"] span, [class*="color"] label, [class*="Color"] li')
+            for elem in color_elements:
+                text = elem.get_text().strip()
+                title = elem.get('title', '')
+                if title and len(title) < 20:
+                    colors.append(title)
+                elif text and len(text) < 20 and text not in colors:
+                    colors.append(text)
+        
+        # 방법 3: data 속성에서 추출
+        if not colors:
+            color_data = soup.select('[data-color], [data-option-color]')
+            for elem in color_data:
+                color_val = elem.get('data-color') or elem.get('data-option-color')
+                if color_val and color_val not in colors:
+                    colors.append(color_val)
+        
+        # 방법 4: 페이지 텍스트에서 COLOR/컬러 섹션 찾기
+        if not colors:
+            text_content = soup.get_text()
+            color_match = re.search(r'(?:COLOR|컬러|색상)\s*[:\-]?\s*([A-Z가-힣\s,/]+?)(?:\n|SIZE|사이즈|$)', text_content, re.IGNORECASE)
+            if color_match:
+                color_str = color_match.group(1).strip()
+                colors = [c.strip() for c in re.split(r'[,/]', color_str) if c.strip() and len(c.strip()) < 15]
+        
+        colors_str = ", ".join(colors[:5]) if colors else ""  # 최대 5개
+        
+        # 4. 사이즈 추출 (__NEXT_DATA__ 우선)
+        sizes = []
+        
+        # __NEXT_DATA__에서 사이즈 추출
+        if next_data:
+            item_options = next_data.get('itemOptions', [])
+            for opt in item_options:
+                size_name = opt.get('size', '')
+                if size_name and size_name.upper() not in [s.upper() for s in sizes]:
+                    sizes.append(size_name.upper())
+        
+        # 방법 1: 사이즈 관련 select/option에서 추출
+        if not sizes:
+            size_selectors = [
+                'select[name*="size"] option',
+                'select[name*="Size"] option',
+                'select[id*="size"] option',
+                '[class*="size"] option',
+                '[class*="Size"] option'
+            ]
+            for selector in size_selectors:
+                options = soup.select(selector)
+                for opt in options:
+                    text = opt.get_text().strip()
+                    if text and text not in ['선택', '사이즈선택', '- 선택 -', '']:
+                        # 사이즈 형식 체크 (S, M, L, XL, 숫자 등)
+                        if re.match(r'^(XS|S|M|L|XL|XXL|FREE|\d+)$', text, re.IGNORECASE):
+                            sizes.append(text.upper())
+                if sizes:
+                    break
+        
+        # 방법 2: 사이즈 버튼/라벨에서 추출
+        if not sizes:
+            size_elements = soup.select('[class*="size"] li, [class*="size"] span, [class*="size"] label, [class*="Size"] li')
+            for elem in size_elements:
+                text = elem.get_text().strip()
+                if re.match(r'^(XS|S|M|L|XL|XXL|FREE|\d+)$', text, re.IGNORECASE):
+                    sizes.append(text.upper())
+        
+        # 방법 3: data 속성에서 추출
+        if not sizes:
+            size_data = soup.select('[data-size], [data-option-size]')
+            for elem in size_data:
+                size_val = elem.get('data-size') or elem.get('data-option-size')
+                if size_val and size_val.upper() not in sizes:
+                    sizes.append(size_val.upper())
+        
+        # 방법 4: 페이지 텍스트에서 SIZE 섹션 찾기
+        if not sizes:
+            text_content = soup.get_text()
+            size_match = re.search(r'(?:SIZE|사이즈)\s*[:\-]?\s*([A-Z0-9\s,/]+?)(?:\n|COLOR|컬러|$)', text_content, re.IGNORECASE)
+            if size_match:
+                size_str = size_match.group(1).strip()
+                for s in re.split(r'[,/\s]+', size_str):
+                    s = s.strip().upper()
+                    if s and re.match(r'^(XS|S|M|L|XL|XXL|FREE|\d+)$', s):
+                        sizes.append(s)
+        
+        sizes_str = ", ".join(sorted(set(sizes), key=lambda x: ['XS','S','M','L','XL','XXL','FREE'].index(x) if x in ['XS','S','M','L','XL','XXL','FREE'] else 99)) if sizes else ""
+        
+        # 5. 특징 추출 (다양한 방법 시도)
         features = ""
         
         # DESCRIPTION 영역 찾기
@@ -230,7 +393,7 @@ def crawl_product_page(url, product_code):
                 if features:
                     break
 
-        # 4. 이미지 추출
+        # 6. 이미지 추출
         og_image = soup.find('meta', property='og:image')
         image_url = og_image['content'] if og_image and og_image.get('content') else None
         
@@ -257,8 +420,8 @@ def crawl_product_page(url, product_code):
             "id": int(time.time() * 1000),
             "name": name,
             "price": price,
-            "colors": "", 
-            "sizes": "", 
+            "colors": colors_str, 
+            "sizes": sizes_str, 
             "features": features,
             "productCode": product_code,
             "productUrl": url,

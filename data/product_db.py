@@ -45,24 +45,41 @@ def extract_product_code(input_url):
     # URL 정제 (파라미터 제거)
     clean_url = input_url.split('?')[0]
     
-    patterns = [
+    # 세르지오 타키니 패턴
+    sergio_patterns = [
         r'sergiotacchini\.co\.kr\/product-detail\/([A-Z0-9]+)-[A-Z]{2,3}',
         r'product-detail\/([A-Z0-9]+)-[A-Z]{2,3}',
         r'([A-Z]{2,4}\d{5})-[A-Z]{2,3}',
         r'([A-Z]{4}\d{5}[A-Z]?)'
     ]
     
-    # 1차 시도: 정제된 URL로 확인
-    for pattern in patterns:
+    # 듀베티카 패턴 (세르지오 타키니와 동일한 URL 구조)
+    duvetica_patterns = [
+        r'duvetica\.co\.kr\/product-detail\/([A-Z0-9]+)-[A-Z]{2,3}',
+        r'duvetica\.co\.kr\/product\/([^\/\?]+)',
+        r'duvetica\.co\.kr\/goods\/([^\/\?]+)',
+        r'\/product\/([A-Z0-9\-]+)',
+        r'\/goods\/view\?no=(\d+)',
+        r'goodsNo=(\d+)'
+    ]
+    
+    # 1차 시도: 세르지오 타키니 패턴
+    for pattern in sergio_patterns:
         match = re.search(pattern, clean_url, re.IGNORECASE)
         if match:
             return match.group(1).upper()
+    
+    # 2차 시도: 듀베티카 패턴
+    for pattern in duvetica_patterns:
+        match = re.search(pattern, clean_url, re.IGNORECASE)
+        if match:
+            return match.group(1)
             
-    # 2차 시도: 원본 URL로 확인 (혹시 파라미터 쪽에 코드가 있을 경우 대비)
-    for pattern in patterns:
+    # 3차 시도: 원본 URL로 확인 (혹시 파라미터 쪽에 코드가 있을 경우 대비)
+    for pattern in sergio_patterns + duvetica_patterns:
         match = re.search(pattern, input_url, re.IGNORECASE)
         if match:
-            return match.group(1).upper()
+            return match.group(1)
             
     # 직접 입력 패턴
     direct_match = re.match(r'^([A-Z]{4}\d{5}[A-Z]?)(?:-[A-Z]{2,3})?$', input_url.strip().upper())
@@ -71,12 +88,28 @@ def extract_product_code(input_url):
         
     return None
 
-def process_image_from_url(img_url):
+def get_referer_from_url(url):
+    """URL에서 Referer 추출"""
+    if 'duvetica' in url.lower():
+        return 'https://www.duvetica.co.kr/'
+    elif 'sergiotacchini' in url.lower():
+        return 'https://www.sergiotacchini.co.kr/'
+    else:
+        # URL에서 도메인 추출
+        match = re.search(r'https?://([^/]+)', url)
+        if match:
+            return f"https://{match.group(1)}/"
+        return ''
+
+def process_image_from_url(img_url, referer=None):
     """이미지 URL에서 썸네일 생성"""
     try:
+        if not referer:
+            referer = get_referer_from_url(img_url)
+        
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Referer': 'https://www.sergiotacchini.co.kr/'
+            'Referer': referer
         }
         # verify=False로 SSL 에러 방지
         img_response = requests.get(img_url, headers=headers, timeout=10, verify=False)
@@ -97,11 +130,14 @@ def process_image_from_url(img_url):
 def crawl_product_page(url, product_code):
     """
     DB에 없는 제품일 경우, 실제 웹페이지를 크롤링하여 정보를 추출합니다.
+    세르지오 타키니, 듀베티카 등 다양한 쇼핑몰을 지원합니다.
     """
     try:
+        referer = get_referer_from_url(url)
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Referer': referer
         }
         # verify=False 옵션 추가
         response = requests.get(url, headers=headers, timeout=10, verify=False)
@@ -111,27 +147,50 @@ def crawl_product_page(url, product_code):
             
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # 1. 제품명 추출
+        # 1. 제품명 추출 (다양한 방법 시도)
         name = ""
+        # og:title 시도
         og_title = soup.find('meta', property='og:title')
-        if og_title:
+        if og_title and og_title.get('content'):
             name = og_title['content']
-        else:
+        
+        # h1 태그 시도
+        if not name:
             h1 = soup.find('h1')
             if h1:
                 name = h1.get_text().strip()
         
-        if name:
-            name = name.split(' - ')[0].split(' | ')[0]
+        # 상품명 클래스 시도 (다양한 쇼핑몰 대응)
+        if not name:
+            for selector in ['.goods_name', '.product-name', '.prd_name', '.item_name', '[class*="product"][class*="name"]']:
+                elem = soup.select_one(selector)
+                if elem:
+                    name = elem.get_text().strip()
+                    break
         
-        # 2. 가격 추출
+        if name:
+            name = name.split(' - ')[0].split(' | ')[0].strip()
+        
+        # 2. 가격 추출 (다양한 방법 시도)
         price = ""
+        # og:description에서 가격 찾기
         og_desc = soup.find('meta', property='og:description')
         if og_desc and og_desc.get('content'):
             price_match = re.search(r'(\d{1,3}(?:,\d{3})+)원?', og_desc['content'])
             if price_match:
                 price = price_match.group(1)
         
+        # 가격 클래스에서 찾기
+        if not price:
+            for selector in ['.price', '.goods_price', '.prd_price', '.sell_price', '[class*="price"]']:
+                elem = soup.select_one(selector)
+                if elem:
+                    price_match = re.search(r'(\d{1,3}(?:,\d{3})+)', elem.get_text())
+                    if price_match:
+                        price = price_match.group(1)
+                        break
+        
+        # 전체 텍스트에서 가격 찾기
         if not price:
             text_content = soup.get_text()
             price_matches = re.findall(r'(\d{1,3}(?:,\d{3})+)', text_content)
@@ -141,39 +200,56 @@ def crawl_product_page(url, product_code):
                     price = p
                     break
                     
-        # 3. 특징 추출
+        # 3. 특징 추출 (다양한 방법 시도)
         features = ""
-        desc_markers = soup.find_all(string=re.compile("DESCRIPTION", re.IGNORECASE))
+        
+        # DESCRIPTION 영역 찾기
+        desc_markers = soup.find_all(string=re.compile("DESCRIPTION|상품설명|제품설명|상세정보", re.IGNORECASE))
         for marker in desc_markers:
             parent_section = marker.find_parent('div') or marker.find_parent('section')
             if parent_section:
                 text = parent_section.get_text(separator='\n')
-                if "DESCRIPTION" in text:
-                    parts = text.split("DESCRIPTION")
-                    target_text = parts[1] if len(parts) > 1 else text
-                    for stopper in ["상품코드", "소재", "제조년월", "SIZE", "SHIPPING"]:
-                        if stopper in target_text:
-                            target_text = target_text.split(stopper)[0]
-                    lines = [line.strip() for line in target_text.split('\n') if line.strip()]
-                    clean_lines = []
-                    for line in lines:
-                        if len(line) > 2:
-                            if not line.startswith('-') and not line.startswith('*'):
-                                clean_lines.append(f"- {line}")
-                            else:
-                                clean_lines.append(line)
-                    features = "\n".join(clean_lines[:6])
-                    if features:
-                        break
+                for keyword in ["DESCRIPTION", "상품설명", "제품설명", "상세정보"]:
+                    if keyword in text:
+                        parts = text.split(keyword)
+                        target_text = parts[1] if len(parts) > 1 else text
+                        for stopper in ["상품코드", "소재", "제조년월", "SIZE", "SHIPPING", "배송", "교환", "반품"]:
+                            if stopper in target_text:
+                                target_text = target_text.split(stopper)[0]
+                        lines = [line.strip() for line in target_text.split('\n') if line.strip()]
+                        clean_lines = []
+                        for line in lines:
+                            if len(line) > 2 and len(line) < 200:
+                                if not line.startswith('-') and not line.startswith('*'):
+                                    clean_lines.append(f"- {line}")
+                                else:
+                                    clean_lines.append(line)
+                        features = "\n".join(clean_lines[:6])
+                        if features:
+                            break
+                if features:
+                    break
 
         # 4. 이미지 추출
         og_image = soup.find('meta', property='og:image')
-        image_url = og_image['content'] if og_image else None
+        image_url = og_image['content'] if og_image and og_image.get('content') else None
         
+        # og:image가 없으면 다른 방법 시도
+        if not image_url:
+            for selector in ['.goods_image img', '.product-image img', '.prd_img img', '[class*="product"] img']:
+                elem = soup.select_one(selector)
+                if elem and elem.get('src'):
+                    image_url = elem['src']
+                    break
+        
+        # 상대 경로를 절대 경로로 변환
         if image_url and not image_url.startswith('http'):
-            image_url = f"https://www.sergiotacchini.co.kr{image_url}"
+            # URL에서 도메인 추출
+            domain_match = re.search(r'(https?://[^/]+)', url)
+            if domain_match:
+                image_url = f"{domain_match.group(1)}{image_url}"
             
-        processed_image = process_image_from_url(image_url) if image_url else None
+        processed_image = process_image_from_url(image_url, referer) if image_url else None
         if not processed_image:
             processed_image = f"https://placehold.co/300x300/png?text={product_code}"
 

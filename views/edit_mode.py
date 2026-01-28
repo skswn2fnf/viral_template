@@ -206,7 +206,7 @@ def render_edit_mode():
         # 2. 제품 정보 섹션
         section_header("📦", "제품 정보")
         with st.expander("제품 목록", expanded=True):
-            st.info("🔗 Sergio Tacchini 공식몰 제품 URL을 입력하면 정보가 자동 채워집니다.")
+            st.info("🔗 공식몰 제품 URL을 입력하면 정보가 자동 채워집니다.")
             
             url_col1, url_col2 = st.columns([3, 1])
             url_input = url_col1.text_input("제품 URL 입력", key="url_input_field")

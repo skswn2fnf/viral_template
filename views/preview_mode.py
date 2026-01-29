@@ -120,6 +120,7 @@ def generate_shareable_html(state):
             </div>
         </div>
         {'<div class="section-wrapper"><div class="section-header">🎨 톤앤매너</div><div class="section-body"><div class="info-box">' + insta['tone_and_manner'] + '</div></div></div>' if insta['tone_and_manner'] else ''}
+        {'<div class="section-wrapper"><div class="section-header">#️⃣ 해시태그</div><div class="section-body"><code style="display:block; background:#e9ecef; padding:15px; border-radius:8px; white-space:pre-wrap;">' + insta['hashtags'] + '</code></div></div>' if insta.get('hashtags') else ''}
         <div class="section-wrapper highlight-blue">
             <div class="section-header accent">♻️ 2차 활용</div>
             <div class="section-body accent">
@@ -147,6 +148,7 @@ def generate_shareable_html(state):
             </div>
         </div>
         {'<div class="section-wrapper"><div class="section-header">💬 희망 메시지</div><div class="section-body"><div class="info-box">' + yt['key_message'] + '</div></div></div>' if yt['key_message'] else ''}
+        {'<div class="section-wrapper"><div class="section-header accent">📢 필수 멘트</div><div class="section-body accent"><p><strong>' + yt['required_mentions'] + '</strong></p></div></div>' if yt.get('required_mentions') else ''}
         """
     
     # 제품 정보 HTML 생성
@@ -704,6 +706,13 @@ def render_preview_mode():
             st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
             st.info(insta['tone_and_manner'])
             st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 해시태그
+        if insta.get('hashtags'):
+            section_title("#️⃣", "해시태그")
+            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
+            st.code(insta['hashtags'], language=None)
+            st.markdown('</div>', unsafe_allow_html=True)
             
         # 2차 활용 (파란색 하이라이트)
         section_title("♻️", "2차 활용")
@@ -726,6 +735,13 @@ def render_preview_mode():
             section_title("💬", "희망 메시지")
             st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
             st.info(yt['key_message'])
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 필수 멘트
+        if yt.get('required_mentions'):
+            section_title("📢", "필수 멘트")
+            st.markdown('<div style="background-color: #e3f2fd; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #90caf9; border-top: none;">', unsafe_allow_html=True)
+            st.markdown(f"**{yt['required_mentions']}**")
             st.markdown('</div>', unsafe_allow_html=True)
 
     # 2. 법적 문구 (파란색 하이라이트 - 중요!)

@@ -630,11 +630,18 @@ def render_preview_mode():
         st.caption("⬆️ 이 이미지를 썸네일로 사용해주세요")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 섹션 헤더 스타일 함수
-    def section_title(icon, title):
+    # 완전한 섹션 렌더링 함수 (헤더+바디 통합)
+    def render_section(icon, title, content, highlight=False):
+        bg_color = '#e3f2fd' if highlight else '#f8f9fa'
+        border_color = '#90caf9' if highlight else '#dee2e6'
         st.markdown(f"""
-        <div style="background-color: #495057; color: white; padding: 10px 15px; border-radius: 6px 6px 0 0; margin-top: 15px; font-weight: 600;">
-            {icon} {title}
+        <div style="margin-bottom: 15px;">
+            <div style="background-color: #495057; color: white; padding: 10px 15px; border-radius: 6px 6px 0 0; font-weight: 600;">
+                {icon} {title}
+            </div>
+            <div style="background-color: {bg_color}; padding: 20px; border-radius: 0 0 6px 6px; border: 1px solid {border_color}; border-top: none;">
+                {content}
+            </div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -643,106 +650,108 @@ def render_preview_mode():
         blog = state['blog_data']
         
         # 키워드 섹션
-        section_title("🏷️", "키워드 설정")
-        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-        st.markdown("**필수 제목 키워드**")
-        st.markdown(" ".join([f"`{k['text']}`" for k in blog['title_keywords'] if k['text']]))
-        st.markdown("**서브 키워드**")
-        st.markdown(" ".join([f"`{k['text']}`" for k in blog['sub_keywords'] if k['text']]))
-        st.markdown('</div>', unsafe_allow_html=True)
+        title_kw_html = " ".join([f'<code style="background:#343a40; color:white; padding:3px 8px; border-radius:4px; margin:2px;">{k["text"]}</code>' for k in blog['title_keywords'] if k['text']])
+        sub_kw_html = " ".join([f'<code style="background:#6c757d; color:white; padding:3px 8px; border-radius:4px; margin:2px;">{k["text"]}</code>' for k in blog['sub_keywords'] if k['text']])
+        keyword_content = f"""
+            <p><strong>필수 제목 키워드</strong></p>
+            <p>{title_kw_html}</p>
+            <p style="margin-top:15px;"><strong>서브 키워드</strong></p>
+            <p>{sub_kw_html}</p>
+        """
+        render_section("🏷️", "키워드 설정", keyword_content)
         
         # 활용 이미지 섹션
-        section_title("🖼️", "활용 이미지")
-        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-        st.markdown(f"- {basic['model_name']} {blog['images']['model_note']} **{blog['images']['model_count']}장** 이상")
-        if blog['images']['sns_url']:
-            st.markdown(f"- SNS 캡쳐 **{blog['images']['sns_count']}장** 이상")
-        st.markdown('</div>', unsafe_allow_html=True)
+        sns_line = f"<li>SNS 캡쳐 <strong>{blog['images']['sns_count']}장</strong> 이상</li>" if blog['images']['sns_url'] else ''
+        image_content = f"""
+            <ul>
+                <li>{basic['model_name']} {blog['images']['model_note']} <strong>{blog['images']['model_count']}장</strong> 이상</li>
+                {sns_line}
+            </ul>
+        """
+        render_section("🖼️", "활용 이미지", image_content)
         
-        # 활용 이미지 섹션 - 자사몰 링크
+        # 자사몰 링크 섹션
         if blog['images'].get('mall_link'):
-            section_title("🔗", "자사몰 링크")
-            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-            st.markdown(f"[{blog['images']['mall_link']}]({blog['images']['mall_link']})")
-            st.markdown('</div>', unsafe_allow_html=True)
+            mall_content = f'<a href="{blog["images"]["mall_link"]}" target="_blank" style="color:#1976d2; text-decoration:none; font-weight:500;">{blog["images"]["mall_link"]} →</a>'
+            render_section("🔗", "자사몰 링크", mall_content)
         
         # 스토리라인 섹션
-        section_title("📖", "스토리라인")
-        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-        st.markdown(f"**타겟**: {blog['story']['target_audience']}")
-        if blog['story']['campaign_concept']:
-            st.markdown(f"**컨셉**: {blog['story']['campaign_concept']}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        concept_line = f"<p><strong>컨셉</strong>: {blog['story']['campaign_concept']}</p>" if blog['story']['campaign_concept'] else ''
+        story_content = f"""
+            <p><strong>타겟</strong>: {blog['story']['target_audience']}</p>
+            {concept_line}
+        """
+        render_section("📖", "스토리라인", story_content)
         
         # 트렌드/브랜드 설명 섹션
         if blog['story'].get('trend'):
-            section_title("💡", "트렌드 / 브랜드 설명")
-            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-            st.markdown(blog['story']['trend'])
-            st.markdown('</div>', unsafe_allow_html=True)
+            trend_html = blog['story']['trend'].replace('\n', '<br>')
+            render_section("💡", "트렌드 / 브랜드 설명", f"<p>{trend_html}</p>")
         
         # 제품 특장점 섹션
         if blog['story'].get('product_strength'):
-            section_title("✨", "제품 특장점")
-            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-            st.markdown(blog['story']['product_strength'])
-            st.markdown('</div>', unsafe_allow_html=True)
+            strength_html = blog['story']['product_strength'].replace('\n', '<br>')
+            render_section("✨", "제품 특장점", f"<p>{strength_html}</p>")
 
     elif platform == 'instagram':
         insta = state['insta_data']
         
         # 콘텐츠 스펙
-        section_title("📐", "콘텐츠 스펙")
-        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        c1.metric("유형", insta['content_type'])
-        c2.metric("사이즈", insta['content_size'])
-        st.markdown(f"**멘션**: `{insta['mentions']}`")
-        st.markdown('</div>', unsafe_allow_html=True)
+        spec_content = f"""
+            <div style="display:flex; gap:20px; margin-bottom:15px;">
+                <div style="background:white; padding:15px 25px; border-radius:10px; text-align:center; flex:1; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <span style="display:block; font-size:0.85em; color:#666; margin-bottom:5px;">유형</span>
+                    <span style="font-size:1.3em; font-weight:700; color:#343a40;">{insta['content_type']}</span>
+                </div>
+                <div style="background:white; padding:15px 25px; border-radius:10px; text-align:center; flex:1; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <span style="display:block; font-size:0.85em; color:#666; margin-bottom:5px;">사이즈</span>
+                    <span style="font-size:1.3em; font-weight:700; color:#343a40;">{insta['content_size']}</span>
+                </div>
+            </div>
+            <p><strong>멘션</strong>: <code style="background:#e9ecef; padding:2px 6px; border-radius:4px;">{insta['mentions']}</code></p>
+        """
+        render_section("📐", "콘텐츠 스펙", spec_content)
         
         # 톤앤매너
         if insta['tone_and_manner']:
-            section_title("🎨", "톤앤매너")
-            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-            st.info(insta['tone_and_manner'])
-            st.markdown('</div>', unsafe_allow_html=True)
+            tone_content = f'<div style="background:#e3f2fd; border-left:4px solid #2196f3; padding:15px; border-radius:0 8px 8px 0;">{insta["tone_and_manner"]}</div>'
+            render_section("🎨", "톤앤매너", tone_content)
         
         # 해시태그
         if insta.get('hashtags'):
-            section_title("#️⃣", "해시태그")
-            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-            st.code(insta['hashtags'], language=None)
-            st.markdown('</div>', unsafe_allow_html=True)
+            hashtag_content = f'<code style="display:block; background:#e9ecef; padding:15px; border-radius:8px; white-space:pre-wrap;">{insta["hashtags"]}</code>'
+            render_section("#️⃣", "해시태그", hashtag_content)
             
         # 2차 활용 (파란색 하이라이트)
-        section_title("♻️", "2차 활용")
-        st.markdown('<div style="background-color: #e3f2fd; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #90caf9; border-top: none;">', unsafe_allow_html=True)
-        st.markdown(f"**{insta['reuse_clause']}**")
-        st.markdown('</div>', unsafe_allow_html=True)
+        reuse_content = f"<p><strong>{insta['reuse_clause']}</strong></p>"
+        render_section("♻️", "2차 활용", reuse_content, highlight=True)
 
     elif platform == 'youtube':
         yt = state['youtube_data']
         
         # 콘텐츠 스펙
-        section_title("🎬", "콘텐츠 스펙")
-        st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        c1.metric("유형", yt['content_type'])
-        c2.metric("권장 길이", yt['duration'] or "자유")
-        st.markdown('</div>', unsafe_allow_html=True)
+        spec_content = f"""
+            <div style="display:flex; gap:20px; margin-bottom:15px;">
+                <div style="background:white; padding:15px 25px; border-radius:10px; text-align:center; flex:1; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <span style="display:block; font-size:0.85em; color:#666; margin-bottom:5px;">유형</span>
+                    <span style="font-size:1.3em; font-weight:700; color:#343a40;">{yt['content_type']}</span>
+                </div>
+                <div style="background:white; padding:15px 25px; border-radius:10px; text-align:center; flex:1; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <span style="display:block; font-size:0.85em; color:#666; margin-bottom:5px;">권장 길이</span>
+                    <span style="font-size:1.3em; font-weight:700; color:#343a40;">{yt['duration'] or '자유'}</span>
+                </div>
+            </div>
+        """
+        render_section("🎬", "콘텐츠 스펙", spec_content)
         
         if yt['key_message']:
-            section_title("💬", "희망 메시지")
-            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
-            st.info(yt['key_message'])
-            st.markdown('</div>', unsafe_allow_html=True)
+            message_content = f'<div style="background:#e3f2fd; border-left:4px solid #2196f3; padding:15px; border-radius:0 8px 8px 0;">{yt["key_message"]}</div>'
+            render_section("💬", "희망 메시지", message_content)
         
         # 필수 멘트
         if yt.get('required_mentions'):
-            section_title("📢", "필수 멘트")
-            st.markdown('<div style="background-color: #e3f2fd; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #90caf9; border-top: none;">', unsafe_allow_html=True)
-            st.markdown(f"**{yt['required_mentions']}**")
-            st.markdown('</div>', unsafe_allow_html=True)
+            mentions_html = yt['required_mentions'].replace('\n', '<br>')
+            render_section("📢", "필수 멘트", f"<p><strong>{mentions_html}</strong></p>", highlight=True)
 
     # 2. 법적 문구 (파란색 하이라이트 - 중요!)
     final_legal = state['legal_text'].replace('{브랜드명}', basic['brand_name'])
@@ -756,8 +765,13 @@ def render_preview_mode():
     """, unsafe_allow_html=True)
 
     # 3. 제품 정보 (하단)
-    section_title("📦", "제품 정보")
-    st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 20px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="margin-bottom: 15px;">
+        <div style="background-color: #495057; color: white; padding: 10px 15px; border-radius: 6px 6px 0 0; font-weight: 600;">
+            📦 제품 정보
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     valid_products = [p for p in state['products'] if p.get('name') or p.get('productCode')]
     
@@ -766,7 +780,6 @@ def render_preview_mode():
     else:
         for p in valid_products:
             with st.container(border=True):
-                # 제품 카드 내부는 흰색 유지 (st.container 기본값)
                 title_prefix = "★ [메인]" if p.get('isMain') else ""
                 
                 img_col, text_col = st.columns([1, 3])
@@ -794,4 +807,3 @@ def render_preview_mode():
                     
                     if p.get('productUrl'):
                         st.markdown(f"[제품 상세보기]({p['productUrl']})")
-    st.markdown('</div>', unsafe_allow_html=True)

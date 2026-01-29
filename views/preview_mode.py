@@ -27,6 +27,44 @@ def generate_shareable_html(state):
         title_keywords = " ".join([f'<span class="keyword">{k["text"]}</span>' for k in blog['title_keywords'] if k['text']])
         sub_keywords = " ".join([f'<span class="keyword sub">{k["text"]}</span>' for k in blog['sub_keywords'] if k['text']])
         
+        # 자사몰 링크 섹션
+        mall_link_section = ""
+        if blog['images'].get('mall_link'):
+            mall_link_section = f"""
+            <div class="section-wrapper">
+                <div class="section-header">🔗 자사몰 링크</div>
+                <div class="section-body">
+                    <a href="{blog['images']['mall_link']}" target="_blank" style="color: {accent_color}; text-decoration: none; font-weight: 500;">{blog['images']['mall_link']} →</a>
+                </div>
+            </div>
+            """
+        
+        # 트렌드/브랜드 설명 섹션
+        trend_section = ""
+        if blog['story'].get('trend'):
+            trend_html = blog['story']['trend'].replace('\n', '<br>')
+            trend_section = f"""
+            <div class="section-wrapper">
+                <div class="section-header">💡 트렌드 / 브랜드 설명</div>
+                <div class="section-body">
+                    <p>{trend_html}</p>
+                </div>
+            </div>
+            """
+        
+        # 제품 특장점 섹션
+        strength_section = ""
+        if blog['story'].get('product_strength'):
+            strength_html = blog['story']['product_strength'].replace('\n', '<br>')
+            strength_section = f"""
+            <div class="section-wrapper">
+                <div class="section-header">✨ 제품 특장점</div>
+                <div class="section-body">
+                    <p>{strength_html}</p>
+                </div>
+            </div>
+            """
+        
         platform_section = f"""
         <div class="section-wrapper">
             <div class="section-header">🏷️ 키워드 설정</div>
@@ -50,6 +88,7 @@ def generate_shareable_html(state):
                 </ul>
             </div>
         </div>
+        {mall_link_section}
         <div class="section-wrapper">
             <div class="section-header">📖 스토리라인</div>
             <div class="section-body">
@@ -57,6 +96,8 @@ def generate_shareable_html(state):
                 {'<p><strong>컨셉</strong>: ' + blog['story']['campaign_concept'] + '</p>' if blog['story']['campaign_concept'] else ''}
             </div>
         </div>
+        {trend_section}
+        {strength_section}
         """
     
     elif platform == 'instagram':
@@ -616,6 +657,13 @@ def render_preview_mode():
             st.markdown(f"- SNS 캡쳐 **{blog['images']['sns_count']}장** 이상")
         st.markdown('</div>', unsafe_allow_html=True)
         
+        # 활용 이미지 섹션 - 자사몰 링크
+        if blog['images'].get('mall_link'):
+            section_title("🔗", "자사몰 링크")
+            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
+            st.markdown(f"[{blog['images']['mall_link']}]({blog['images']['mall_link']})")
+            st.markdown('</div>', unsafe_allow_html=True)
+        
         # 스토리라인 섹션
         section_title("📖", "스토리라인")
         st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
@@ -623,6 +671,20 @@ def render_preview_mode():
         if blog['story']['campaign_concept']:
             st.markdown(f"**컨셉**: {blog['story']['campaign_concept']}")
         st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 트렌드/브랜드 설명 섹션
+        if blog['story'].get('trend'):
+            section_title("💡", "트렌드 / 브랜드 설명")
+            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
+            st.markdown(blog['story']['trend'])
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 제품 특장점 섹션
+        if blog['story'].get('product_strength'):
+            section_title("✨", "제품 특장점")
+            st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 15px; border: 1px solid #dee2e6; border-top: none;">', unsafe_allow_html=True)
+            st.markdown(blog['story']['product_strength'])
+            st.markdown('</div>', unsafe_allow_html=True)
 
     elif platform == 'instagram':
         insta = state['insta_data']

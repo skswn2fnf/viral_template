@@ -155,10 +155,26 @@ def generate_shareable_html(state):
     products_html = ""
     valid_products = [p for p in state['products'] if p.get('name') or p.get('productCode')]
     
+    def format_features(features_text):
+        """특징 텍스트를 리스트 형태로 변환"""
+        if not features_text:
+            return ''
+        # 줄바꿈 또는 ' - '로 분리
+        lines = features_text.replace(' - ', '\n- ').split('\n')
+        items = [line.strip().lstrip('-').strip() for line in lines if line.strip()]
+        if len(items) > 1:
+            # 여러 항목이면 리스트로 표시
+            list_items = ''.join([f'<li>{item}</li>' for item in items if item])
+            return f'<div class="product-features"><strong>특징</strong>:<ul>{list_items}</ul></div>'
+        else:
+            # 한 항목이면 단순 텍스트
+            return f'<p><strong>특징</strong>: {features_text}</p>'
+    
     if valid_products:
         for p in valid_products:
             main_badge = '<span class="main-badge">★ 메인</span>' if p.get('isMain') else ''
             img_html = f'<img src="{p["imageUrl"]}" alt="제품 이미지">' if p.get('imageUrl') else '<div class="no-image">No Image</div>'
+            features_html = format_features(p.get('features', ''))
             
             products_html += f"""
             <div class="product-card">
@@ -171,7 +187,7 @@ def generate_shareable_html(state):
                         <span><strong>사이즈</strong>: {p.get('sizes', '-')}</span>
                     </div>
                     {'<p class="product-code">Code: ' + p['productCode'] + '</p>' if p.get('productCode') else ''}
-                    {'<p><strong>특징</strong>: ' + p['features'] + '</p>' if p.get('features') else ''}
+                    {features_html}
                     {'<a href="' + p['productUrl'] + '" target="_blank" class="product-link">제품 상세보기 →</a>' if p.get('productUrl') else ''}
                 </div>
             </div>
@@ -416,6 +432,17 @@ def generate_shareable_html(state):
         .product-code {{
             color: #666;
             font-size: 0.85em;
+        }}
+        .product-features {{
+            margin-top: 10px;
+        }}
+        .product-features ul {{
+            margin: 8px 0 0 20px;
+            padding: 0;
+        }}
+        .product-features li {{
+            margin-bottom: 5px;
+            line-height: 1.5;
         }}
         .product-link {{
             display: inline-block;

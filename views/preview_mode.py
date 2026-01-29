@@ -633,9 +633,9 @@ def render_preview_mode():
     # 전역 CSS로 마진 제거
     st.markdown("""
     <style>
-        .section-header { background-color: #495057; color: white; padding: 10px 15px; border-radius: 6px 6px 0 0; font-weight: 600; margin-bottom: 0 !important; }
-        .section-body { background-color: #f8f9fa; padding: 20px; border-radius: 0 0 6px 6px; border: 1px solid #dee2e6; border-top: none; margin-top: -1rem !important; margin-bottom: 15px; }
-        .section-body-highlight { background-color: #e3f2fd; padding: 20px; border-radius: 0 0 6px 6px; border: 1px solid #90caf9; border-top: none; margin-top: -1rem !important; margin-bottom: 15px; }
+        .section-header { background-color: #495057; color: white; padding: 10px 15px; border-radius: 6px; font-weight: 600; margin-bottom: 10px !important; }
+        .section-body { padding: 0 5px 15px 5px; margin-top: -0.5rem !important; margin-bottom: 15px; }
+        .section-body-highlight { background-color: #e3f2fd; padding: 15px 20px; border-radius: 8px; border: 1px solid #90caf9; margin-top: -0.5rem !important; margin-bottom: 15px; }
         .stMarkdown { margin-bottom: 0 !important; }
     </style>
     """, unsafe_allow_html=True)

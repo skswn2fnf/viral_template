@@ -18,6 +18,67 @@ def get_saveable_state():
         'saved_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
+def ensure_blog_data_structure(blog):
+    """블로그 데이터 구조 보장"""
+    if 'title_keywords' not in blog:
+        blog['title_keywords'] = [{'id': 1, 'text': ''}]
+    if 'sub_keywords' not in blog:
+        blog['sub_keywords'] = [{'id': 1, 'text': ''}]
+    if 'images' not in blog:
+        blog['images'] = {}
+    if 'story' not in blog:
+        blog['story'] = {}
+    
+    # images 하위 구조
+    img = blog['images']
+    img.setdefault('model_count', 8)
+    img.setdefault('model_note', '')
+    img.setdefault('sns_count', 2)
+    img.setdefault('sns_url', '')
+    img.setdefault('coupon_capture', True)
+    img.setdefault('mall_link', '')
+    
+    # story 하위 구조
+    story = blog['story']
+    story.setdefault('target_audience', '')
+    story.setdefault('trend', '')
+    story.setdefault('product_strength', '')
+    story.setdefault('campaign_concept', '')
+    
+    return blog
+
+def ensure_insta_data_structure(insta):
+    """인스타그램 데이터 구조 보장"""
+    insta.setdefault('content_type', 'feed')
+    insta.setdefault('content_size', '1:1')
+    insta.setdefault('tone_and_manner', '')
+    insta.setdefault('hashtags', '')
+    insta.setdefault('brand_mention', '')
+    insta.setdefault('celeb_mention', '')
+    return insta
+
+def ensure_youtube_data_structure(yt):
+    """유튜브 데이터 구조 보장"""
+    yt.setdefault('content_type', 'shorts')
+    yt.setdefault('duration', '')
+    yt.setdefault('key_message', '')
+    yt.setdefault('required_mentions', '')
+    return yt
+
+def ensure_product_structure(p, idx=0):
+    """제품 데이터 구조 보장"""
+    p.setdefault('id', int(time.time() * 1000) + idx)
+    p.setdefault('name', '')
+    p.setdefault('price', '')
+    p.setdefault('colors', '')
+    p.setdefault('sizes', '')
+    p.setdefault('features', '')
+    p.setdefault('productCode', '')
+    p.setdefault('productUrl', '')
+    p.setdefault('imageUrl', '')
+    p.setdefault('isMain', False)
+    return p
+
 def load_state_from_json(json_data):
     """JSON 데이터로부터 상태 복원"""
     try:
@@ -27,35 +88,16 @@ def load_state_from_json(json_data):
         if 'platform' in data:
             st.session_state['platform'] = data['platform']
         if 'blog_data' in data:
-            st.session_state['blog_data'] = data['blog_data']
+            st.session_state['blog_data'] = ensure_blog_data_structure(data['blog_data'])
         if 'insta_data' in data:
-            st.session_state['insta_data'] = data['insta_data']
+            st.session_state['insta_data'] = ensure_insta_data_structure(data['insta_data'])
         if 'youtube_data' in data:
-            st.session_state['youtube_data'] = data['youtube_data']
+            st.session_state['youtube_data'] = ensure_youtube_data_structure(data['youtube_data'])
         if 'products' in data:
             # 제품 데이터 구조 보장
             products = data['products']
-            for p in products:
-                if 'id' not in p:
-                    p['id'] = int(time.time() * 1000)
-                if 'name' not in p:
-                    p['name'] = ''
-                if 'price' not in p:
-                    p['price'] = ''
-                if 'colors' not in p:
-                    p['colors'] = ''
-                if 'sizes' not in p:
-                    p['sizes'] = ''
-                if 'features' not in p:
-                    p['features'] = ''
-                if 'productCode' not in p:
-                    p['productCode'] = ''
-                if 'productUrl' not in p:
-                    p['productUrl'] = ''
-                if 'imageUrl' not in p:
-                    p['imageUrl'] = ''
-                if 'isMain' not in p:
-                    p['isMain'] = False
+            for idx, p in enumerate(products):
+                ensure_product_structure(p, idx)
             st.session_state['products'] = products
         if 'legal_text' in data:
             st.session_state['legal_text'] = data['legal_text']
@@ -356,33 +398,72 @@ def render_edit_mode():
         
         if platform == 'blog':
             section_header("📖", "블로그 설정")
-            blog = st.session_state['blog_data']
+            blog = st.session_state.get('blog_data', {})
+            
+            # 블로그 데이터 구조 보장
+            if 'title_keywords' not in blog:
+                blog['title_keywords'] = [{'id': 1, 'text': ''}]
+            if 'sub_keywords' not in blog:
+                blog['sub_keywords'] = [{'id': 1, 'text': ''}]
+            if 'images' not in blog:
+                blog['images'] = {}
+            if 'story' not in blog:
+                blog['story'] = {}
+            
+            # images 하위 구조 보장
+            blog_images = blog['images']
+            if 'model_count' not in blog_images:
+                blog_images['model_count'] = 8
+            if 'model_note' not in blog_images:
+                blog_images['model_note'] = ''
+            if 'sns_count' not in blog_images:
+                blog_images['sns_count'] = 2
+            if 'sns_url' not in blog_images:
+                blog_images['sns_url'] = ''
+            if 'coupon_capture' not in blog_images:
+                blog_images['coupon_capture'] = True
+            if 'mall_link' not in blog_images:
+                blog_images['mall_link'] = ''
+            
+            # story 하위 구조 보장
+            blog_story = blog['story']
+            if 'target_audience' not in blog_story:
+                blog_story['target_audience'] = ''
+            if 'trend' not in blog_story:
+                blog_story['trend'] = ''
+            if 'product_strength' not in blog_story:
+                blog_story['product_strength'] = ''
+            if 'campaign_concept' not in blog_story:
+                blog_story['campaign_concept'] = ''
+            
+            st.session_state['blog_data'] = blog
+            
             with st.expander("🏷️ 키워드 설정", expanded=True):
                 st.caption("필수 제목 키워드 (콤마로 구분)")
                 # 단순화를 위해 리스트 UI 대신 텍스트 입력 후 분리 방식으로 변경
-                title_kw_str = ", ".join([k['text'] for k in blog['title_keywords'] if k['text']])
+                title_kw_str = ", ".join([k.get('text', '') for k in blog.get('title_keywords', []) if k.get('text')])
                 new_title_kw = st.text_input("필수 키워드", value=title_kw_str, placeholder="예: 여성패딩, 숏패딩")
                 # 저장 로직
                 blog['title_keywords'] = [{'id': i, 'text': t.strip()} for i, t in enumerate(new_title_kw.split(','))]
 
                 st.caption("서브 키워드 (콤마로 구분)")
-                sub_kw_str = ", ".join([k['text'] for k in blog['sub_keywords'] if k['text']])
+                sub_kw_str = ", ".join([k.get('text', '') for k in blog.get('sub_keywords', []) if k.get('text')])
                 new_sub_kw = st.text_input("서브 키워드", value=sub_kw_str)
                 blog['sub_keywords'] = [{'id': i, 'text': t.strip()} for i, t in enumerate(new_sub_kw.split(','))]
 
             with st.expander("🖼️ 활용 이미지", expanded=True):
                 i_col1, i_col2 = st.columns(2)
-                blog['images']['model_count'] = i_col1.number_input("모델 이미지 장수", value=int(blog['images']['model_count']))
-                blog['images']['model_note'] = i_col2.text_input("이미지 구분", value=blog['images']['model_note'])
+                blog_images['model_count'] = i_col1.number_input("모델 이미지 장수", value=int(blog_images.get('model_count', 8)))
+                blog_images['model_note'] = i_col2.text_input("이미지 구분", value=blog_images.get('model_note', ''))
                 
-                blog['images']['sns_url'] = st.text_input("SNS 캡쳐 URL", value=blog['images']['sns_url'])
-                blog['images']['mall_link'] = st.text_input("자사몰 링크", value=blog['images']['mall_link'])
+                blog_images['sns_url'] = st.text_input("SNS 캡쳐 URL", value=blog_images.get('sns_url', ''))
+                blog_images['mall_link'] = st.text_input("자사몰 링크", value=blog_images.get('mall_link', ''))
 
             with st.expander("✨ 스토리라인", expanded=True):
-                blog['story']['target_audience'] = st.text_input("타겟 오디언스", value=blog['story']['target_audience'])
-                blog['story']['trend'] = st.text_area("트렌드 배경", value=blog['story']['trend'])
-                blog['story']['product_strength'] = st.text_area("제품 특장점", value=blog['story']['product_strength'])
-                blog['story']['campaign_concept'] = st.text_input("캠페인 컨셉", value=blog['story']['campaign_concept'])
+                blog_story['target_audience'] = st.text_input("타겟 오디언스", value=blog_story.get('target_audience', ''))
+                blog_story['trend'] = st.text_area("트렌드 배경", value=blog_story.get('trend', ''))
+                blog_story['product_strength'] = st.text_area("제품 특장점", value=blog_story.get('product_strength', ''))
+                blog_story['campaign_concept'] = st.text_input("캠페인 컨셉", value=blog_story.get('campaign_concept', ''))
 
         elif platform == 'instagram':
             section_header("📷", "인스타그램 설정")
@@ -431,16 +512,33 @@ def render_edit_mode():
 
         elif platform == 'youtube':
             section_header("🎬", "유튜브 설정")
-            yt = st.session_state['youtube_data']
+            yt = st.session_state.get('youtube_data', {})
+            
+            # 유튜브 데이터 구조 보장
+            if 'content_type' not in yt:
+                yt['content_type'] = 'shorts'
+            if 'duration' not in yt:
+                yt['duration'] = ''
+            if 'key_message' not in yt:
+                yt['key_message'] = ''
+            if 'required_mentions' not in yt:
+                yt['required_mentions'] = ''
+            
+            content_types = ['shorts', 'review', 'vlog', 'integration']
+            if yt['content_type'] not in content_types:
+                yt['content_type'] = 'shorts'
+            
+            st.session_state['youtube_data'] = yt
+            
             with st.expander("🎬 콘텐츠 스펙", expanded=True):
                 y_col1, y_col2 = st.columns(2)
-                yt['content_type'] = y_col1.selectbox("콘텐츠 유형", ['shorts', 'review', 'vlog', 'integration'],
-                                                      index=['shorts', 'review', 'vlog', 'integration'].index(yt['content_type']))
-                yt['duration'] = y_col2.text_input("권장 영상 길이", value=yt['duration'])
+                yt['content_type'] = y_col1.selectbox("콘텐츠 유형", content_types,
+                                                      index=content_types.index(yt['content_type']))
+                yt['duration'] = y_col2.text_input("권장 영상 길이", value=yt.get('duration', ''))
             
             with st.expander("💬 희망 메시지", expanded=True):
-                yt['key_message'] = st.text_area("대표 메시지", value=yt['key_message'])
-                yt['required_mentions'] = st.text_area("필수 멘트", value=yt['required_mentions'])
+                yt['key_message'] = st.text_area("대표 메시지", value=yt.get('key_message', ''))
+                yt['required_mentions'] = st.text_area("필수 멘트", value=yt.get('required_mentions', ''))
 
         # 4. 공통 법적 문구
         section_header("⚖️", "필수 기재 문구")

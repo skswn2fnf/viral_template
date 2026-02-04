@@ -103,11 +103,13 @@ def generate_plain_text(state):
             if p.get('productUrl'):
                 output.append(f"   🔗 {p.get('productUrl', '')}")
 
-    output.append("\n⚖️ 필수 기재 문구")
-    output.append("─────────────────────────────────────────")
-    brand_name = basic_info.get('brand_name', '')
-    final_legal = legal_text.replace('{브랜드명}', brand_name)
-    output.append(f'"{final_legal}"')
+    # 인스타그램은 필수 기재 문구 제외
+    if platform != 'instagram':
+        output.append("\n⚖️ 필수 기재 문구")
+        output.append("─────────────────────────────────────────")
+        brand_name = basic_info.get('brand_name', '')
+        final_legal = legal_text.replace('{브랜드명}', brand_name)
+        output.append(f'"{final_legal}"')
 
     return "\n".join(output)
 

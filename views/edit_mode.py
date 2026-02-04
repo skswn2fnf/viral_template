@@ -106,13 +106,67 @@ def load_state_from_json(json_data):
         return False, str(e)
 
 def image_to_data_url(uploaded_file):
-    """업로드된 이미지를 base64 data URL로 변환"""
+    """업로드된 이미지를 base64 data URL로 변환 (원본 유지, 메인 화보용)"""
     if uploaded_file is not None:
         bytes_data = uploaded_file.getvalue()
         b64 = base64.b64encode(bytes_data).decode()
         file_type = uploaded_file.type
         return f"data:{file_type};base64,{b64}"
     return None
+
+def compress_image_to_data_url(uploaded_file, max_size_kb=300, max_width=800):
+    """
+    제품 이미지를 압축하여 base64 data URL로 변환
+    - max_size_kb: 목표 최대 파일 크기 (KB)
+    - max_width: 최대 가로 픽셀
+    """
+    if uploaded_file is None:
+        return None
+    
+    try:
+        from PIL import Image
+        from io import BytesIO
+        
+        # 이미지 열기
+        img = Image.open(uploaded_file)
+        
+        # RGBA -> RGB 변환 (PNG 투명 배경 처리)
+        if img.mode in ('RGBA', 'P'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[3] if len(img.split()) > 3 else None)
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # 리사이즈 (가로 기준)
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((max_width, new_height), Image.LANCZOS)
+        
+        # 압축 (JPEG 품질 조정)
+        quality = 85
+        while quality >= 20:
+            buffer = BytesIO()
+            img.save(buffer, format='JPEG', quality=quality, optimize=True)
+            size_kb = len(buffer.getvalue()) / 1024
+            
+            if size_kb <= max_size_kb:
+                break
+            quality -= 10
+        
+        # base64 인코딩
+        b64 = base64.b64encode(buffer.getvalue()).decode()
+        return f"data:image/jpeg;base64,{b64}"
+    
+    except Exception as e:
+        # 압축 실패 시 원본 반환
+        uploaded_file.seek(0)
+        bytes_data = uploaded_file.getvalue()
+        b64 = base64.b64encode(bytes_data).decode()
+        return f"data:{uploaded_file.type};base64,{b64}"
 
 def section_header(icon, title):
     """진회색 배경 + 화이트 텍스트 섹션 헤더"""
@@ -166,6 +220,18 @@ def render_edit_mode():
                 mime="application/json",
                 use_container_width=True
             )
+            
+            # 현재 파일 크기 표시
+            current_size_kb = len(json_str.encode('utf-8')) / 1024
+            if current_size_kb < 1024:
+                size_text = f"{current_size_kb:.1f} KB"
+            else:
+                size_text = f"{current_size_kb/1024:.2f} MB"
+            
+            if current_size_kb > 5120:  # 5MB 초과 시 경고
+                st.warning(f"⚠️ 현재 크기: {size_text} (권장: 5MB 이하)")
+            else:
+                st.caption(f"📊 현재 크기: {size_text} / 권장 최대: 5MB")
         
         with save_col2:
             st.markdown("**📤 저장된 작업 불러오기**")
@@ -179,15 +245,32 @@ def render_edit_mode():
             )
             
             if uploaded_json:
-                if st.button("📂 불러오기 실행", use_container_width=True):
-                    json_content = uploaded_json.read().decode('utf-8')
-                    success, info = load_state_from_json(json_content)
-                    if success:
-                        st.success(f"✅ 불러오기 완료! (저장 시간: {info})")
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error(f"❌ 불러오기 실패: {info}")
+                # 파일 크기 확인
+                file_size_mb = uploaded_json.size / 1024 / 1024
+                if file_size_mb > 10:
+                    st.error(f"❌ 파일이 너무 큽니다 ({file_size_mb:.1f}MB). 10MB 이하 파일만 불러올 수 있습니다.")
+                elif file_size_mb > 5:
+                    st.warning(f"⚠️ 파일 크기: {file_size_mb:.1f}MB - 로딩이 느릴 수 있습니다.")
+                    if st.button("📂 불러오기 실행", use_container_width=True):
+                        with st.spinner("불러오는 중... (파일이 커서 시간이 걸릴 수 있습니다)"):
+                            json_content = uploaded_json.read().decode('utf-8')
+                            success, info = load_state_from_json(json_content)
+                            if success:
+                                st.success(f"✅ 불러오기 완료! (저장 시간: {info})")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error(f"❌ 불러오기 실패: {info}")
+                else:
+                    if st.button("📂 불러오기 실행", use_container_width=True):
+                        json_content = uploaded_json.read().decode('utf-8')
+                        success, info = load_state_from_json(json_content)
+                        if success:
+                            st.success(f"✅ 불러오기 완료! (저장 시간: {info})")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ 불러오기 실패: {info}")
     
     st.markdown("---")
 
@@ -340,7 +423,7 @@ def render_edit_mode():
                                 p['imageUrl'] = ''
                                 st.rerun()
                         else:
-                            # 이미지 업로드
+                            # 이미지 업로드 (자동 압축 적용)
                             uploaded_file = st.file_uploader(
                                 "이미지 업로드",
                                 type=['png', 'jpg', 'jpeg', 'webp'],
@@ -348,11 +431,12 @@ def render_edit_mode():
                                 label_visibility="collapsed"
                             )
                             if uploaded_file:
-                                data_url = image_to_data_url(uploaded_file)
+                                # 제품 이미지는 자동 압축 적용 (최대 300KB, 가로 800px)
+                                data_url = compress_image_to_data_url(uploaded_file, max_size_kb=300, max_width=800)
                                 if data_url:
                                     p['imageUrl'] = data_url
                                     st.rerun()
-                            st.caption("PNG, JPG, WEBP")
+                            st.caption("자동 압축됨")
 
                     with content_col:
                         # 메인 제품 체크 및 삭제 버튼

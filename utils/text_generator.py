@@ -2,29 +2,36 @@ def generate_plain_text(state):
     """
     현재 상태(Session State)를 기반으로 클립보드 복사용 텍스트를 생성합니다.
     """
-    basic_info = state['basic_info']
-    platform = state['platform']
-    blog_data = state['blog_data']
-    insta_data = state['insta_data']
-    youtube_data = state['youtube_data']
-    products = state['products']
-    legal_text = state['legal_text']
+    basic_info = state.get('basic_info', {})
+    platform = state.get('platform', 'blog')
+    blog_data = state.get('blog_data', {})
+    insta_data = state.get('insta_data', {})
+    youtube_data = state.get('youtube_data', {})
+    products = state.get('products', [])
+    legal_text = state.get('legal_text', '')
 
-    campaign_label = '🔒 히든' if basic_info['campaign_type'] == 'hidden' else '📢 오피셜'
+    campaign_label = '🔒 히든' if basic_info.get('campaign_type') == 'hidden' else '📢 오피셜'
     platform_label_map = {'blog': '블로그', 'instagram': '인스타그램', 'youtube': '유튜브'}
     platform_label = platform_label_map.get(platform, '블로그')
 
     output = []
     output.append(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    output.append(f"{basic_info['brand_name']} [{platform_label}] {basic_info['model_name']} {basic_info['campaign_round']}")
+    output.append(f"{basic_info.get('brand_name', '')} [{platform_label}] {basic_info.get('model_name', '')} {basic_info.get('campaign_round', '')}")
     output.append(f"{campaign_label} 캠페인")
     output.append(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
     
-    output.append(f"📅 포스팅 기한: {basic_info['posting_date']} {basic_info['posting_time']} 이후\n")
+    # 인스타그램은 '이후' 제외
+    deadline_suffix = "" if platform == 'instagram' else " 이후"
+    output.append(f"📅 포스팅 기한: {basic_info.get('posting_date', '')} {basic_info.get('posting_time', '')}{deadline_suffix}\n")
 
     if platform == 'blog':
-        title_kw = " / ".join([k['text'] for k in blog_data['title_keywords'] if k['text']])
-        sub_kw = " / ".join([k['text'] for k in blog_data['sub_keywords'] if k['text']])
+        blog_images = blog_data.get('images', {})
+        blog_story = blog_data.get('story', {})
+        title_keywords = blog_data.get('title_keywords', [])
+        sub_keywords = blog_data.get('sub_keywords', [])
+        
+        title_kw = " / ".join([k.get('text', '') for k in title_keywords if k.get('text')])
+        sub_kw = " / ".join([k.get('text', '') for k in sub_keywords if k.get('text')])
         
         output.append("🏷️ 키워드 설정")
         output.append("─────────────────────────────────────────")
@@ -33,61 +40,68 @@ def generate_plain_text(state):
         
         output.append("🖼️ 활용 이미지 (필수★)")
         output.append("─────────────────────────────────────────")
-        output.append(f"□ {basic_info['model_name']} {blog_data['images']['model_note']} {blog_data['images']['model_count']}장 이상")
-        if blog_data['images']['sns_url']:
-            output.append(f"□ SNS 캡쳐 {blog_data['images']['sns_count']}장 이상 ({blog_data['images']['sns_url']})")
-        if blog_data['images']['coupon_capture']:
+        output.append(f"□ {basic_info.get('model_name', '')} {blog_images.get('model_note', '')} {blog_images.get('model_count', 0)}장 이상")
+        if blog_images.get('sns_url'):
+            output.append(f"□ SNS 캡쳐 {blog_images.get('sns_count', 0)}장 이상 ({blog_images.get('sns_url', '')})")
+        if blog_images.get('coupon_capture'):
             output.append("□ 자사몰 쿠폰팩 캡쳐이미지")
-        output.append(f"□ 자사몰 링크: {blog_data['images']['mall_link']}\n")
+        output.append(f"□ 자사몰 링크: {blog_images.get('mall_link', '')}\n")
         
         output.append("📖 스토리라인")
         output.append("─────────────────────────────────────────")
-        output.append(f"▸ 타겟: {blog_data['story']['target_audience']}")
-        if blog_data['story']['trend']:
-            output.append(f"[트렌드] {blog_data['story']['trend']}")
-        if blog_data['story']['product_strength']:
-            output.append(f"[특장점] {blog_data['story']['product_strength']}")
-        if blog_data['story']['campaign_concept']:
-            output.append(f"[컨셉] {blog_data['story']['campaign_concept']}")
+        output.append(f"▸ 타겟: {blog_story.get('target_audience', '')}")
+        if blog_story.get('trend'):
+            output.append(f"[트렌드] {blog_story.get('trend', '')}")
+        if blog_story.get('product_strength'):
+            output.append(f"[특장점] {blog_story.get('product_strength', '')}")
+        if blog_story.get('campaign_concept'):
+            output.append(f"[컨셉] {blog_story.get('campaign_concept', '')}")
 
     elif platform == 'instagram':
         type_map = {'feed': '피드', 'reels': '릴스', 'story': '스토리', 'carousel': '캐러셀'}
-        content_type = type_map.get(insta_data['content_type'], '피드')
+        content_type = type_map.get(insta_data.get('content_type', 'feed'), '피드')
         
         output.append("📐 콘텐츠 스펙")
         output.append("─────────────────────────────────────────")
-        output.append(f"▸ 유형: {content_type} | 사이즈: {insta_data['content_size']}")
-        output.append(f"▸ 멘션: {insta_data['mentions']}\n")
+        output.append(f"▸ 유형: {content_type} | 사이즈: {insta_data.get('content_size', '1:1')}")
         
-        output.append(f"🎨 톤앤매너: {insta_data['tone_and_manner'] or '(자유롭게 작성)'}")
-        output.append(f"#️⃣ 해시태그: {insta_data['hashtags'] or '(미입력)'}")
-        output.append(f"♻️ 2차 활용: {insta_data['reuse_clause']}")
+        # 멘션 (브랜드/셀럽 분리)
+        brand_mention = insta_data.get('brand_mention', '')
+        celeb_mention = insta_data.get('celeb_mention', '')
+        if brand_mention:
+            output.append(f"▸ 브랜드 멘션: {brand_mention}")
+        if celeb_mention:
+            output.append(f"▸ 셀럽/모델 멘션: {celeb_mention}")
+        output.append("")
+        
+        output.append(f"🎨 톤앤매너: {insta_data.get('tone_and_manner', '') or '(자유롭게 작성)'}")
+        output.append(f"#️⃣ 해시태그: {insta_data.get('hashtags', '') or '(미입력)'}")
 
     elif platform == 'youtube':
         type_map = {'shorts': '쇼츠', 'review': '리뷰', 'vlog': '브이로그', 'integration': 'PPL'}
-        content_type = type_map.get(youtube_data['content_type'], '쇼츠')
+        content_type = type_map.get(youtube_data.get('content_type', 'shorts'), '쇼츠')
         
-        output.append(f"🎬 콘텐츠 스펙: {content_type} | 길이: {youtube_data['duration'] or '자유'}")
-        output.append(f"💬 희망 메시지: {youtube_data['key_message'] or '(자유)'}")
-        output.append(f"📢 필수 멘트: {youtube_data['required_mentions'] or '(없음)'}")
+        output.append(f"🎬 콘텐츠 스펙: {content_type} | 길이: {youtube_data.get('duration', '') or '자유'}")
+        output.append(f"💬 희망 메시지: {youtube_data.get('key_message', '') or '(자유)'}")
+        output.append(f"📢 필수 멘트: {youtube_data.get('required_mentions', '') or '(없음)'}")
 
     output.append("\n📦 제품 정보")
     output.append("─────────────────────────────────────────")
     
     for p in products:
-        if p['name']:
+        if p.get('name'):
             mark = "★ [메인]" if p.get('isMain', False) else "•"
-            output.append(f"\n{mark} {p['name']}")
-            if p['colors']:
-                output.append(f"   컬러: {p['colors']}")
-            if p['price']:
-                output.append(f"   가격: ₩{p['price']}")
-            if p['sizes']:
-                output.append(f" | 사이즈: {p['sizes']}")
-            if p['features']:
-                output.append(f"   특징: {p['features']}")
-            if p['productUrl']:
-                output.append(f"   🔗 {p['productUrl']}")
+            output.append(f"\n{mark} {p.get('name', '')}")
+            if p.get('colors'):
+                output.append(f"   컬러: {p.get('colors', '')}")
+            if p.get('price'):
+                output.append(f"   가격: ₩{p.get('price', '')}")
+            if p.get('sizes'):
+                output.append(f" | 사이즈: {p.get('sizes', '')}")
+            if p.get('features'):
+                output.append(f"   특징: {p.get('features', '')}")
+            if p.get('productUrl'):
+                output.append(f"   🔗 {p.get('productUrl', '')}")
 
     output.append("\n⚖️ 필수 기재 문구")
     output.append("─────────────────────────────────────────")

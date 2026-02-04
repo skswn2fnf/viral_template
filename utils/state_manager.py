@@ -69,6 +69,45 @@ def init_session_state():
                 'duration': '',
                 'provided_content': {}
             }
+        
+        # Review Blog Data (리뷰 블로그)
+        if 'review_blog_data' not in st.session_state:
+            st.session_state['review_blog_data'] = {
+                # 필수 키워드
+                'title_keywords': {
+                    'required': [{'id': 1, 'text': ''}],  # 필수 제목 키워드
+                    'optional': [{'id': 1, 'text': ''}]   # 선택 제목 키워드
+                },
+                'body_keywords': {
+                    'brand': '',    # BRAND 키워드
+                    'item': '',     # ITEM 키워드
+                    'style': ''     # STYLE 키워드
+                },
+                # 브랜드 소개
+                'brand_intro': '',
+                # 제품 소개 가이드
+                'product_guide': '제품 정보 참고하여 상세히 리뷰 부탁드립니다.',
+                # 스타일링 가이드
+                'styling': {
+                    'concept': '',           # 스타일링 컨셉
+                    'matching_items': '',    # 매칭 아이템
+                    'other_notes': ''        # 기타 안내 (브라탑 착용 등)
+                },
+                # 필수 촬영 앵글
+                'required_angles': {
+                    'full_body': True,       # 전신샷
+                    'upper_body': True,      # 상반신샷
+                    'mirror': False,         # 거울샷
+                    'detail': False,         # 디테일샷
+                    'custom': ''             # 기타 앵글
+                },
+                # 톤앤매너
+                'tone_and_manner': '',
+                # 이미지 분량
+                'min_images': 10,
+                # 포스팅 가이드
+                'posting_guide': '본인의 말투로 친근하게 워싱해서 작성 필수'
+            }
             
         # Products
         if 'products' not in st.session_state:

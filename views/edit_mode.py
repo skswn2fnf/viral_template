@@ -348,16 +348,21 @@ def render_edit_mode():
     st.markdown("---")
 
     # 플랫폼 선택 (Tabs)
-    platforms = ["blog", "instagram", "youtube"]
-    labels = ["📖 블로그", "📷 인스타그램", "🎬 유튜브"]
+    platforms = ["blog", "review_blog", "instagram", "youtube"]
+    labels = ["📖 블로그", "📝 리뷰블로그", "📷 인스타그램", "🎬 유튜브"]
     
     # 현재 선택된 플랫폼의 인덱스 찾기
-    current_index = platforms.index(st.session_state['platform'])
+    current_platform = st.session_state.get('platform', 'blog')
+    if current_platform not in platforms:
+        current_platform = 'blog'
+    current_index = platforms.index(current_platform)
     selected_tab = st.radio("플랫폼 선택", labels, index=current_index, horizontal=True, label_visibility="collapsed")
     
     # 선택에 따라 상태 업데이트
     if selected_tab == "📖 블로그":
         st.session_state['platform'] = 'blog'
+    elif selected_tab == "📝 리뷰블로그":
+        st.session_state['platform'] = 'review_blog'
     elif selected_tab == "📷 인스타그램":
         st.session_state['platform'] = 'instagram'
     else:
@@ -696,6 +701,113 @@ def render_edit_mode():
             with st.expander("💬 희망 메시지", expanded=True):
                 yt['key_message'] = st.text_area("대표 메시지", value=yt.get('key_message', ''))
                 yt['required_mentions'] = st.text_area("필수 멘트", value=yt.get('required_mentions', ''))
+
+        elif platform == 'review_blog':
+            section_header("📝", "리뷰 블로그 설정")
+            rb = st.session_state.get('review_blog_data', {})
+            
+            # 리뷰 블로그 데이터 구조 보장
+            if 'title_keywords' not in rb:
+                rb['title_keywords'] = {'required': [{'id': 1, 'text': ''}], 'optional': [{'id': 1, 'text': ''}]}
+            if 'body_keywords' not in rb:
+                rb['body_keywords'] = {'brand': '', 'item': '', 'style': ''}
+            if 'brand_intro' not in rb:
+                rb['brand_intro'] = ''
+            if 'product_guide' not in rb:
+                rb['product_guide'] = '제품 정보 참고하여 상세히 리뷰 부탁드립니다.'
+            if 'styling' not in rb:
+                rb['styling'] = {'concept': '', 'matching_items': '', 'other_notes': ''}
+            if 'required_angles' not in rb:
+                rb['required_angles'] = {'full_body': True, 'upper_body': True, 'mirror': False, 'detail': False, 'custom': ''}
+            if 'tone_and_manner' not in rb:
+                rb['tone_and_manner'] = ''
+            if 'min_images' not in rb:
+                rb['min_images'] = 10
+            if 'posting_guide' not in rb:
+                rb['posting_guide'] = '본인의 말투로 친근하게 워싱해서 작성 필수'
+            
+            st.session_state['review_blog_data'] = rb
+            
+            # 1. 이미지 분량 설정
+            with st.expander("📷 이미지 분량", expanded=True):
+                rb['min_images'] = st.number_input("최소 이미지 장수", value=int(rb.get('min_images', 10)), min_value=1)
+            
+            # 2. 필수 키워드 설정
+            with st.expander("🏷️ 필수 키워드", expanded=True):
+                st.markdown("**제목 키워드**")
+                kw_col1, kw_col2 = st.columns(2)
+                
+                # 필수 제목 키워드
+                req_kw = rb['title_keywords'].get('required', [])
+                req_kw_str = ", ".join([k.get('text', '') for k in req_kw if k.get('text')])
+                new_req_kw = kw_col1.text_input("필수 키워드", value=req_kw_str, placeholder="예: #프리미엄 #액티브웨어")
+                rb['title_keywords']['required'] = [{'id': i, 'text': t.strip()} for i, t in enumerate(new_req_kw.split(','))]
+                
+                # 선택 제목 키워드
+                opt_kw = rb['title_keywords'].get('optional', [])
+                opt_kw_str = ", ".join([k.get('text', '') for k in opt_kw if k.get('text')])
+                new_opt_kw = kw_col2.text_input("선택 키워드", value=opt_kw_str, placeholder="예: #맨투맨 #부츠컷레깅스")
+                rb['title_keywords']['optional'] = [{'id': i, 'text': t.strip()} for i, t in enumerate(new_opt_kw.split(','))]
+                
+                st.markdown("---")
+                st.markdown("**본문 필수 키워드**")
+                
+                body_kw = rb.get('body_keywords', {})
+                body_kw['brand'] = st.text_input("BRAND 키워드", value=body_kw.get('brand', ''), 
+                                                  placeholder="예: #세르지오타키니 #Sergio Tacchini #웰니스 #헤리티지")
+                body_kw['item'] = st.text_input("ITEM 키워드", value=body_kw.get('item', ''), 
+                                                 placeholder="예: #맨투맨 #여성맨투맨 #부츠컷레깅스")
+                body_kw['style'] = st.text_input("STYLE 키워드", value=body_kw.get('style', ''), 
+                                                  placeholder="예: #웰니스룩 #애슬레저룩 #라운지웨어")
+                rb['body_keywords'] = body_kw
+            
+            # 3. 브랜드 소개
+            with st.expander("🏢 브랜드 소개", expanded=True):
+                rb['brand_intro'] = st.text_area("브랜드 소개 내용", value=rb.get('brand_intro', ''), height=150,
+                                                  placeholder="올해 60주년을 맞은 세르지오 타키니는 테니스 헤리티지를 기반으로...")
+                st.caption("💡 인플루언서가 참고할 브랜드 설명을 입력하세요")
+            
+            # 4. 제품 소개 가이드
+            with st.expander("📦 제품 소개 가이드", expanded=True):
+                rb['product_guide'] = st.text_area("제품 소개 안내", value=rb.get('product_guide', ''), 
+                                                    placeholder="제품 정보 참고하여 상세히 리뷰 부탁드립니다.")
+            
+            # 5. 스타일링 가이드
+            with st.expander("👗 스타일링 가이드", expanded=True):
+                styling = rb.get('styling', {})
+                styling['concept'] = st.text_area("스타일링 컨셉", value=styling.get('concept', ''),
+                                                   placeholder="내추럴하고 편안한 데일리 모드의 애슬레저룩 연출")
+                styling['matching_items'] = st.text_area("매칭 아이템", value=styling.get('matching_items', ''),
+                                                          placeholder="아우터 착용 X, 슬림하고 가벼운 운동화, 헤어밴드나 선글라스 등 웰니스 무드의 ACC 활용")
+                styling['other_notes'] = st.text_area("기타 안내", value=styling.get('other_notes', ''),
+                                                       placeholder="이너에 브라탑 착용, 어깨에 맨투맨을 걸치거나 팔을 빼서 브라탑이 드러나는 컷 필수")
+                rb['styling'] = styling
+            
+            # 6. 필수 촬영 앵글
+            with st.expander("📸 필수 촬영 앵글", expanded=True):
+                angles = rb.get('required_angles', {})
+                
+                st.markdown("**필수 앵글 선택**")
+                a_col1, a_col2, a_col3, a_col4 = st.columns(4)
+                angles['full_body'] = a_col1.checkbox("전신샷", value=angles.get('full_body', True))
+                angles['upper_body'] = a_col2.checkbox("상반신샷", value=angles.get('upper_body', True))
+                angles['mirror'] = a_col3.checkbox("거울샷", value=angles.get('mirror', False))
+                angles['detail'] = a_col4.checkbox("디테일샷", value=angles.get('detail', False))
+                
+                angles['custom'] = st.text_area("추가 앵글 안내", value=angles.get('custom', ''),
+                                                 placeholder="예: 거울샷 - 운동 가기 전 아웃핏 체크 무드의 감도 높은 거울 컷 필수")
+                rb['required_angles'] = angles
+            
+            # 7. 톤앤매너
+            with st.expander("🎨 톤앤매너", expanded=True):
+                rb['tone_and_manner'] = st.text_area("톤앤매너 가이드", value=rb.get('tone_and_manner', ''),
+                                                      placeholder="차분한 색감, 운동 전/후 느낌의 웰니스 무드, 일상적인 배경")
+            
+            # 8. 포스팅 가이드
+            with st.expander("✍️ 포스팅 가이드", expanded=True):
+                rb['posting_guide'] = st.text_area("포스팅 작성 가이드", value=rb.get('posting_guide', ''),
+                                                    placeholder="본인의 말투로 친근하게 워싱해서 작성 필수")
+                st.info("💡 인플루언서가 포스팅 작성 시 참고할 가이드입니다")
 
         # 4. 공통 법적 문구
         section_header("⚖️", "필수 기재 문구")

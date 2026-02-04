@@ -85,6 +85,72 @@ def generate_plain_text(state):
         output.append(f"💬 희망 메시지: {youtube_data.get('key_message', '') or '(자유)'}")
         output.append(f"📢 필수 멘트: {youtube_data.get('required_mentions', '') or '(없음)'}")
 
+    elif platform == 'review_blog':
+        rb = state.get('review_blog_data', {})
+        
+        output.append(f"📷 이미지 분량: {rb.get('min_images', 10)}장 이상\n")
+        
+        # 필수 키워드
+        output.append("🏷️ 필수 키워드")
+        output.append("─────────────────────────────────────────")
+        title_kw = rb.get('title_keywords', {})
+        req_kw = ", ".join([k.get('text', '') for k in title_kw.get('required', []) if k.get('text')])
+        opt_kw = ", ".join([k.get('text', '') for k in title_kw.get('optional', []) if k.get('text')])
+        output.append(f"▸ 필수 제목: {req_kw or '(미입력)'}")
+        output.append(f"▸ 선택 제목: {opt_kw or '(미입력)'}")
+        
+        body_kw = rb.get('body_keywords', {})
+        output.append(f"▸ BRAND: {body_kw.get('brand', '') or '(미입력)'}")
+        output.append(f"▸ ITEM: {body_kw.get('item', '') or '(미입력)'}")
+        output.append(f"▸ STYLE: {body_kw.get('style', '') or '(미입력)'}\n")
+        
+        # 브랜드 소개
+        if rb.get('brand_intro'):
+            output.append("🏢 브랜드 소개")
+            output.append("─────────────────────────────────────────")
+            output.append(rb.get('brand_intro', ''))
+            output.append("")
+        
+        # 스타일링 가이드
+        styling = rb.get('styling', {})
+        if styling.get('concept') or styling.get('matching_items') or styling.get('other_notes'):
+            output.append("👗 스타일링 가이드")
+            output.append("─────────────────────────────────────────")
+            if styling.get('concept'):
+                output.append(f"▸ 컨셉: {styling.get('concept', '')}")
+            if styling.get('matching_items'):
+                output.append(f"▸ 매칭 아이템: {styling.get('matching_items', '')}")
+            if styling.get('other_notes'):
+                output.append(f"▸ 기타: {styling.get('other_notes', '')}")
+            output.append("")
+        
+        # 필수 촬영 앵글
+        angles = rb.get('required_angles', {})
+        angle_list = []
+        if angles.get('full_body'):
+            angle_list.append("전신샷")
+        if angles.get('upper_body'):
+            angle_list.append("상반신샷")
+        if angles.get('mirror'):
+            angle_list.append("거울샷")
+        if angles.get('detail'):
+            angle_list.append("디테일샷")
+        
+        output.append("📸 필수 촬영 앵글")
+        output.append("─────────────────────────────────────────")
+        output.append(f"▸ {', '.join(angle_list) if angle_list else '(미선택)'}")
+        if angles.get('custom'):
+            output.append(f"▸ {angles.get('custom', '')}")
+        output.append("")
+        
+        # 톤앤매너
+        if rb.get('tone_and_manner'):
+            output.append(f"🎨 톤앤매너: {rb.get('tone_and_manner', '')}\n")
+        
+        # 포스팅 가이드
+        if rb.get('posting_guide'):
+            output.append(f"✍️ 포스팅 가이드: {rb.get('posting_guide', '')}\n")
+
     output.append("\n📦 제품 정보")
     output.append("─────────────────────────────────────────")
     

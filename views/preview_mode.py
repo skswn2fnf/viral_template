@@ -15,6 +15,7 @@ def generate_shareable_html(state):
     
     platform_names = {
         'blog': '블로그',
+        'review_blog': '리뷰블로그',
         'instagram': '인스타그램',
         'youtube': '유튜브'
     }
@@ -189,6 +190,82 @@ def generate_shareable_html(state):
         </div>
         {'<div class="section-wrapper"><div class="section-header">💬 희망 메시지</div><div class="section-body"><div class="info-box">' + yt_key_message + '</div></div></div>' if yt_key_message else ''}
         {'<div class="section-wrapper"><div class="section-header accent">📢 필수 멘트</div><div class="section-body accent"><p><strong>' + yt_required_mentions + '</strong></p></div></div>' if yt_required_mentions else ''}
+        """
+    
+    elif platform == 'review_blog':
+        rb = state.get('review_blog_data', {})
+        
+        # 키워드 데이터
+        title_kw = rb.get('title_keywords', {})
+        req_kw = " ".join([f'<span class="keyword">{k.get("text", "")}</span>' for k in title_kw.get('required', []) if k.get('text')])
+        opt_kw = " ".join([f'<span class="keyword sub">{k.get("text", "")}</span>' for k in title_kw.get('optional', []) if k.get('text')])
+        
+        body_kw = rb.get('body_keywords', {})
+        brand_kw = body_kw.get('brand', '')
+        item_kw = body_kw.get('item', '')
+        style_kw = body_kw.get('style', '')
+        
+        # 스타일링 데이터
+        styling = rb.get('styling', {})
+        
+        # 촬영 앵글 데이터
+        angles = rb.get('required_angles', {})
+        angle_list = []
+        if angles.get('full_body'):
+            angle_list.append("전신샷")
+        if angles.get('upper_body'):
+            angle_list.append("상반신샷")
+        if angles.get('mirror'):
+            angle_list.append("거울샷")
+        if angles.get('detail'):
+            angle_list.append("디테일샷")
+        
+        platform_section = f"""
+        <div class="section-wrapper">
+            <div class="section-header">📷 이미지 분량</div>
+            <div class="section-body">
+                <p><strong>{rb.get('min_images', 10)}장</strong> 이상</p>
+            </div>
+        </div>
+        <div class="section-wrapper">
+            <div class="section-header">🏷️ 필수 키워드</div>
+            <div class="section-body">
+                <div class="keyword-group">
+                    <strong>필수 제목 키워드</strong>
+                    <div class="keywords">{req_kw}</div>
+                </div>
+                <div class="keyword-group">
+                    <strong>선택 제목 키워드</strong>
+                    <div class="keywords">{opt_kw}</div>
+                </div>
+                <hr style="margin: 15px 0; border: none; border-top: 1px solid #dee2e6;">
+                <strong>본문 필수 키워드</strong>
+                <table style="width:100%; margin-top:10px; border-collapse:collapse;">
+                    <tr><td style="padding:8px; border:1px solid #dee2e6; background:#f8f9fa; width:80px;"><strong>BRAND</strong></td><td style="padding:8px; border:1px solid #dee2e6;">{brand_kw}</td></tr>
+                    <tr><td style="padding:8px; border:1px solid #dee2e6; background:#f8f9fa;"><strong>ITEM</strong></td><td style="padding:8px; border:1px solid #dee2e6;">{item_kw}</td></tr>
+                    <tr><td style="padding:8px; border:1px solid #dee2e6; background:#f8f9fa;"><strong>STYLE</strong></td><td style="padding:8px; border:1px solid #dee2e6;">{style_kw}</td></tr>
+                </table>
+            </div>
+        </div>
+        {'<div class="section-wrapper"><div class="section-header">🏢 브랜드 소개</div><div class="section-body"><p>' + rb.get("brand_intro", "").replace(chr(10), "<br>") + '</p></div></div>' if rb.get('brand_intro') else ''}
+        {'<div class="section-wrapper"><div class="section-header">📦 제품 소개 가이드</div><div class="section-body"><p>' + rb.get("product_guide", "") + '</p></div></div>' if rb.get('product_guide') else ''}
+        <div class="section-wrapper">
+            <div class="section-header">👗 스타일링 가이드</div>
+            <div class="section-body">
+                {'<p><strong>스타일링 컨셉:</strong> ' + styling.get("concept", "") + '</p>' if styling.get('concept') else ''}
+                {'<p><strong>매칭 아이템:</strong> ' + styling.get("matching_items", "") + '</p>' if styling.get('matching_items') else ''}
+                {'<p><strong>기타:</strong> ' + styling.get("other_notes", "") + '</p>' if styling.get('other_notes') else ''}
+            </div>
+        </div>
+        <div class="section-wrapper">
+            <div class="section-header accent">📸 필수 촬영 앵글</div>
+            <div class="section-body accent">
+                <p><strong>{', '.join(angle_list) if angle_list else '(미선택)'}</strong></p>
+                {'<p>' + angles.get("custom", "").replace(chr(10), "<br>") + '</p>' if angles.get('custom') else ''}
+            </div>
+        </div>
+        {'<div class="section-wrapper"><div class="section-header">🎨 톤앤매너</div><div class="section-body"><div class="info-box">' + rb.get("tone_and_manner", "") + '</div></div></div>' if rb.get('tone_and_manner') else ''}
+        {'<div class="section-wrapper"><div class="section-header">✍️ 포스팅 가이드</div><div class="section-body"><div class="info-box" style="background:#fff3cd; border-color:#ffc107;">' + rb.get("posting_guide", "") + '</div></div></div>' if rb.get('posting_guide') else ''}
         """
     
     # 제품 정보 HTML 생성
@@ -667,6 +744,7 @@ def render_preview_mode():
     # 스타일링 및 헤더 (모노톤)
     platform_labels = {
         'blog': '블로그',
+        'review_blog': '리뷰블로그',
         'instagram': '인스타그램',
         'youtube': '유튜브'
     }
@@ -824,6 +902,89 @@ def render_preview_mode():
             st.markdown('<div class="section-header">📢 필수 멘트</div>', unsafe_allow_html=True)
             st.markdown('<div class="section-body-highlight">', unsafe_allow_html=True)
             st.markdown(f"**{yt.get('required_mentions', '')}**")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    elif platform == 'review_blog':
+        rb = state.get('review_blog_data', {})
+        
+        # 이미지 분량
+        st.markdown('<div class="section-header">📷 이미지 분량</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-body">', unsafe_allow_html=True)
+        st.metric("최소 이미지", f"{rb.get('min_images', 10)}장 이상")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 필수 키워드
+        st.markdown('<div class="section-header">🏷️ 필수 키워드</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-body">', unsafe_allow_html=True)
+        
+        title_kw = rb.get('title_keywords', {})
+        req_kw = ", ".join([k.get('text', '') for k in title_kw.get('required', []) if k.get('text')])
+        opt_kw = ", ".join([k.get('text', '') for k in title_kw.get('optional', []) if k.get('text')])
+        
+        st.markdown("**필수 제목 키워드**")
+        st.markdown(f"`{req_kw}`" if req_kw else "(미입력)")
+        st.markdown("**선택 제목 키워드**")
+        st.markdown(f"`{opt_kw}`" if opt_kw else "(미입력)")
+        
+        st.markdown("---")
+        st.markdown("**본문 필수 키워드**")
+        body_kw = rb.get('body_keywords', {})
+        st.markdown(f"**BRAND**: {body_kw.get('brand', '') or '(미입력)'}")
+        st.markdown(f"**ITEM**: {body_kw.get('item', '') or '(미입력)'}")
+        st.markdown(f"**STYLE**: {body_kw.get('style', '') or '(미입력)'}")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 브랜드 소개
+        if rb.get('brand_intro'):
+            st.markdown('<div class="section-header">🏢 브랜드 소개</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-body">', unsafe_allow_html=True)
+            st.markdown(rb.get('brand_intro', ''))
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 스타일링 가이드
+        styling = rb.get('styling', {})
+        if styling.get('concept') or styling.get('matching_items') or styling.get('other_notes'):
+            st.markdown('<div class="section-header">👗 스타일링 가이드</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-body">', unsafe_allow_html=True)
+            if styling.get('concept'):
+                st.markdown(f"**스타일링 컨셉**: {styling.get('concept', '')}")
+            if styling.get('matching_items'):
+                st.markdown(f"**매칭 아이템**: {styling.get('matching_items', '')}")
+            if styling.get('other_notes'):
+                st.markdown(f"**기타**: {styling.get('other_notes', '')}")
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 필수 촬영 앵글
+        angles = rb.get('required_angles', {})
+        angle_list = []
+        if angles.get('full_body'):
+            angle_list.append("전신샷")
+        if angles.get('upper_body'):
+            angle_list.append("상반신샷")
+        if angles.get('mirror'):
+            angle_list.append("거울샷")
+        if angles.get('detail'):
+            angle_list.append("디테일샷")
+        
+        st.markdown('<div class="section-header">📸 필수 촬영 앵글</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-body-highlight">', unsafe_allow_html=True)
+        st.markdown(f"**{', '.join(angle_list) if angle_list else '(미선택)'}**")
+        if angles.get('custom'):
+            st.markdown(angles.get('custom', ''))
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 톤앤매너
+        if rb.get('tone_and_manner'):
+            st.markdown('<div class="section-header">🎨 톤앤매너</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-body">', unsafe_allow_html=True)
+            st.info(rb.get('tone_and_manner', ''))
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 포스팅 가이드
+        if rb.get('posting_guide'):
+            st.markdown('<div class="section-header">✍️ 포스팅 가이드</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-body">', unsafe_allow_html=True)
+            st.warning(rb.get('posting_guide', ''))
             st.markdown('</div>', unsafe_allow_html=True)
 
     # 2. 법적 문구 (파란색 하이라이트 - 중요!) - 인스타그램은 제외

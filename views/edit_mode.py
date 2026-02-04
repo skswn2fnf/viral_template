@@ -343,21 +343,37 @@ def render_edit_mode():
             section_header("📷", "인스타그램 설정")
             insta = st.session_state['insta_data']
             
-            # 기존 mentions 데이터 호환성 처리
+            # 기존 데이터 호환성 처리
             if 'mentions' in insta and 'brand_mention' not in insta:
                 insta['brand_mention'] = insta.get('mentions', '')
-                insta['celeb_mention'] = ''
             if 'brand_mention' not in insta:
                 insta['brand_mention'] = ''
             if 'celeb_mention' not in insta:
                 insta['celeb_mention'] = ''
+            if 'tone_and_manner' not in insta:
+                insta['tone_and_manner'] = ''
+            if 'hashtags' not in insta:
+                insta['hashtags'] = ''
+            if 'content_type' not in insta:
+                insta['content_type'] = 'feed'
+            if 'content_size' not in insta:
+                insta['content_size'] = '1:1'
+            
+            # content_type이 유효한 값인지 확인
+            content_types = ['feed', 'reels', 'story', 'carousel']
+            if insta['content_type'] not in content_types:
+                insta['content_type'] = 'feed'
+            
+            content_sizes = ['1:1', '4:5', '9:16', '1.91:1']
+            if insta['content_size'] not in content_sizes:
+                insta['content_size'] = '1:1'
             
             with st.expander("📐 콘텐츠 스펙", expanded=True):
                 i_col1, i_col2 = st.columns(2)
-                insta['content_type'] = i_col1.selectbox("콘텐츠 유형", ['feed', 'reels', 'story', 'carousel'], 
-                                                         index=['feed', 'reels', 'story', 'carousel'].index(insta['content_type']))
-                insta['content_size'] = i_col2.selectbox("사이즈", ['1:1', '4:5', '9:16', '1.91:1'], 
-                                                         index=['1:1', '4:5', '9:16', '1.91:1'].index(insta['content_size']))
+                insta['content_type'] = i_col1.selectbox("콘텐츠 유형", content_types, 
+                                                         index=content_types.index(insta['content_type']))
+                insta['content_size'] = i_col2.selectbox("사이즈", content_sizes, 
+                                                         index=content_sizes.index(insta['content_size']))
                 
                 st.markdown("**📍 멘션 계정**")
                 m_col1, m_col2 = st.columns(2)

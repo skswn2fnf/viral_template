@@ -33,7 +33,30 @@ def load_state_from_json(json_data):
         if 'youtube_data' in data:
             st.session_state['youtube_data'] = data['youtube_data']
         if 'products' in data:
-            st.session_state['products'] = data['products']
+            # 제품 데이터 구조 보장
+            products = data['products']
+            for p in products:
+                if 'id' not in p:
+                    p['id'] = int(time.time() * 1000)
+                if 'name' not in p:
+                    p['name'] = ''
+                if 'price' not in p:
+                    p['price'] = ''
+                if 'colors' not in p:
+                    p['colors'] = ''
+                if 'sizes' not in p:
+                    p['sizes'] = ''
+                if 'features' not in p:
+                    p['features'] = ''
+                if 'productCode' not in p:
+                    p['productCode'] = ''
+                if 'productUrl' not in p:
+                    p['productUrl'] = ''
+                if 'imageUrl' not in p:
+                    p['imageUrl'] = ''
+                if 'isMain' not in p:
+                    p['isMain'] = False
+            st.session_state['products'] = products
         if 'legal_text' in data:
             st.session_state['legal_text'] = data['legal_text']
         return True, data.get('saved_at', '알 수 없음')
@@ -234,8 +257,30 @@ def render_edit_mode():
                 st.markdown(f"**등록된 제품: {len(products)}개**")
                 
             for idx, p in enumerate(products):
+                # 제품 데이터 구조 보장 (누락된 필드 기본값 설정)
+                if 'id' not in p:
+                    p['id'] = int(time.time() * 1000) + idx
+                if 'name' not in p:
+                    p['name'] = ''
+                if 'price' not in p:
+                    p['price'] = ''
+                if 'colors' not in p:
+                    p['colors'] = ''
+                if 'sizes' not in p:
+                    p['sizes'] = ''
+                if 'features' not in p:
+                    p['features'] = ''
+                if 'productCode' not in p:
+                    p['productCode'] = ''
+                if 'productUrl' not in p:
+                    p['productUrl'] = ''
+                if 'imageUrl' not in p:
+                    p['imageUrl'] = ''
+                if 'isMain' not in p:
+                    p['isMain'] = False
+                
                 # 제품명으로 아코디언 제목 설정 (없으면 Product N)
-                title = p['name'] if p['name'] else f"Product {idx + 1}"
+                title = p.get('name', '') if p.get('name') else f"Product {idx + 1}"
                 title_prefix = "★ " if p.get('isMain', False) else ""
                 
                 # 아코디언으로 감싸서 공간 절약 (마지막에 추가된 것은 열어두기)
@@ -247,7 +292,7 @@ def render_edit_mode():
                     
                     with img_col:
                         if p.get('imageUrl'):
-                            st.image(p['imageUrl'], use_container_width=True)
+                            st.image(p.get('imageUrl', ''), use_container_width=True)
                             # 이미지 삭제 버튼
                             if st.button("🗑️ 이미지 삭제", key=f"del_img_{p['id']}", use_container_width=True):
                                 p['imageUrl'] = ''
@@ -287,16 +332,16 @@ def render_edit_mode():
                                 st.rerun()
 
                         p_col1, p_col2 = st.columns(2)
-                        p['name'] = p_col1.text_input("제품명", value=p['name'], key=f"name_{p['id']}")
-                        p['productCode'] = p_col2.text_input("상품코드", value=p['productCode'], key=f"code_{p['id']}")
+                        p['name'] = p_col1.text_input("제품명", value=p.get('name', ''), key=f"name_{p['id']}")
+                        p['productCode'] = p_col2.text_input("상품코드", value=p.get('productCode', ''), key=f"code_{p['id']}")
                         
                         p_col3, p_col4, p_col5 = st.columns(3)
-                        p['price'] = p_col3.text_input("가격", value=p['price'], key=f"price_{p['id']}")
-                        p['colors'] = p_col4.text_input("컬러", value=p['colors'], key=f"colors_{p['id']}")
-                        p['sizes'] = p_col5.text_input("사이즈", value=p['sizes'], key=f"sizes_{p['id']}")
+                        p['price'] = p_col3.text_input("가격", value=p.get('price', ''), key=f"price_{p['id']}")
+                        p['colors'] = p_col4.text_input("컬러", value=p.get('colors', ''), key=f"colors_{p['id']}")
+                        p['sizes'] = p_col5.text_input("사이즈", value=p.get('sizes', ''), key=f"sizes_{p['id']}")
                     
                     # 특징은 아래에 넓게 배치
-                    p['features'] = st.text_area("특징", value=p['features'], key=f"feat_{p['id']}", height=150)
+                    p['features'] = st.text_area("특징", value=p.get('features', ''), key=f"feat_{p['id']}", height=150)
 
             if st.button("➕ 제품 직접 추가"):
                 st.session_state['products'].append({

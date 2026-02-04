@@ -1,6 +1,89 @@
 import streamlit as st
 from datetime import datetime
 
+def text_to_html(text):
+    """텍스트를 HTML로 변환 (줄바꿈 처리, 리스트 형식 감지)"""
+    if not text:
+        return ""
+    
+    text = str(text)
+    lines = text.split('\n')
+    
+    # 빈 줄 제거 후 유효한 라인만
+    valid_lines = [line.strip() for line in lines if line.strip()]
+    
+    if len(valid_lines) <= 1:
+        # 한 줄이면 그대로 반환 (줄바꿈만 <br>로)
+        return text.replace('\n', '<br>')
+    
+    # 여러 줄이면 리스트 형태로 감지 시도
+    # 대괄호로 시작하는 섹션 처리 (예: [키워드], [브랜드 설명])
+    result_html = []
+    current_section = None
+    current_items = []
+    
+    for line in valid_lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        # 대괄호로 시작하는 섹션 헤더 감지
+        if line.startswith('[') and ']' in line:
+            # 이전 섹션 마무리
+            if current_section and current_items:
+                result_html.append(f"<p><strong>{current_section}</strong></p>")
+                result_html.append("<ul>")
+                for item in current_items:
+                    result_html.append(f"<li>{item}</li>")
+                result_html.append("</ul>")
+            elif current_section:
+                result_html.append(f"<p><strong>{current_section}</strong></p>")
+            
+            # 새 섹션 시작
+            bracket_end = line.index(']') + 1
+            current_section = line[:bracket_end]
+            remaining = line[bracket_end:].strip()
+            current_items = []
+            
+            if remaining:
+                # 같은 줄에 내용이 있으면 그대로 표시
+                result_html.append(f"<p><strong>{current_section}</strong> {remaining}</p>")
+                current_section = None
+        elif line.startswith('-') or line.startswith('•') or line.startswith('·'):
+            # 리스트 아이템
+            item_text = line[1:].strip()
+            current_items.append(item_text)
+        else:
+            # 일반 텍스트
+            if current_section and not current_items:
+                # 섹션 헤더 다음 첫 번째 일반 텍스트
+                current_items.append(line)
+            elif current_items:
+                current_items.append(line)
+            else:
+                result_html.append(f"<p>{line}</p>")
+    
+    # 마지막 섹션 마무리
+    if current_section and current_items:
+        result_html.append(f"<p><strong>{current_section}</strong></p>")
+        result_html.append("<ul>")
+        for item in current_items:
+            result_html.append(f"<li>{item}</li>")
+        result_html.append("</ul>")
+    elif current_section:
+        result_html.append(f"<p><strong>{current_section}</strong></p>")
+    elif current_items:
+        result_html.append("<ul>")
+        for item in current_items:
+            result_html.append(f"<li>{item}</li>")
+        result_html.append("</ul>")
+    
+    if result_html:
+        return "".join(result_html)
+    else:
+        # 기본 처리: 줄바꿈을 <br>로
+        return text.replace('\n', '<br>')
+
 def generate_shareable_html(state):
     """
     외부 공유용 완전한 HTML 파일을 생성합니다.
@@ -60,12 +143,12 @@ def generate_shareable_html(state):
         # 트렌드/브랜드 설명 섹션
         trend_section = ""
         if trend:
-            trend_html = trend.replace('\n', '<br>')
+            trend_html = text_to_html(trend)
             trend_section = f"""
             <div class="section-wrapper">
                 <div class="section-header">💡 트렌드 / 브랜드 설명</div>
                 <div class="section-body">
-                    <p>{trend_html}</p>
+                    {trend_html}
                 </div>
             </div>
             """
@@ -73,12 +156,12 @@ def generate_shareable_html(state):
         # 제품 특장점 섹션
         strength_section = ""
         if product_strength:
-            strength_html = product_strength.replace('\n', '<br>')
+            strength_html = text_to_html(product_strength)
             strength_section = f"""
             <div class="section-wrapper">
                 <div class="section-header">✨ 제품 특장점</div>
                 <div class="section-body">
-                    <p>{strength_html}</p>
+                    {strength_html}
                 </div>
             </div>
             """
@@ -161,8 +244,8 @@ def generate_shareable_html(state):
             </div>
         </div>
         {mention_html}
-        {'<div class="section-wrapper"><div class="section-header">🎨 톤앤매너</div><div class="section-body"><div class="info-box">' + tone_manner + '</div></div></div>' if tone_manner else ''}
-        {'<div class="section-wrapper"><div class="section-header">#️⃣ 해시태그</div><div class="section-body"><code style="display:block; background:#e9ecef; padding:15px; border-radius:8px; white-space:pre-wrap;">' + hashtags + '</code></div></div>' if hashtags else ''}
+        {'<div class="section-wrapper"><div class="section-header">🎨 톤앤매너</div><div class="section-body"><div class="info-box">' + text_to_html(tone_manner) + '</div></div></div>' if tone_manner else ''}
+        {'<div class="section-wrapper"><div class="section-header">#️⃣ 해시태그</div><div class="section-body"><code style="display:block; background:#e9ecef; padding:15px; border-radius:8px; white-space:pre-wrap;">' + hashtags.replace(chr(10), "<br>") + '</code></div></div>' if hashtags else ''}
         """
     
     elif platform == 'youtube':
@@ -247,25 +330,25 @@ def generate_shareable_html(state):
                 </table>
             </div>
         </div>
-        {'<div class="section-wrapper"><div class="section-header">🏢 브랜드 소개</div><div class="section-body"><p>' + rb.get("brand_intro", "").replace(chr(10), "<br>") + '</p></div></div>' if rb.get('brand_intro') else ''}
-        {'<div class="section-wrapper"><div class="section-header">📦 제품 소개 가이드</div><div class="section-body"><p>' + rb.get("product_guide", "") + '</p></div></div>' if rb.get('product_guide') else ''}
+        {'<div class="section-wrapper"><div class="section-header">🏢 브랜드 소개</div><div class="section-body">' + text_to_html(rb.get("brand_intro", "")) + '</div></div>' if rb.get('brand_intro') else ''}
+        {'<div class="section-wrapper"><div class="section-header">📦 제품 소개 가이드</div><div class="section-body">' + text_to_html(rb.get("product_guide", "")) + '</div></div>' if rb.get('product_guide') else ''}
         <div class="section-wrapper">
             <div class="section-header">👗 스타일링 가이드</div>
             <div class="section-body">
-                {'<p><strong>스타일링 컨셉:</strong> ' + styling.get("concept", "") + '</p>' if styling.get('concept') else ''}
-                {'<p><strong>매칭 아이템:</strong> ' + styling.get("matching_items", "") + '</p>' if styling.get('matching_items') else ''}
-                {'<p><strong>기타:</strong> ' + styling.get("other_notes", "") + '</p>' if styling.get('other_notes') else ''}
+                {'<p><strong>스타일링 컨셉:</strong> ' + styling.get("concept", "").replace(chr(10), "<br>") + '</p>' if styling.get('concept') else ''}
+                {'<p><strong>매칭 아이템:</strong> ' + styling.get("matching_items", "").replace(chr(10), "<br>") + '</p>' if styling.get('matching_items') else ''}
+                {'<p><strong>기타:</strong> ' + styling.get("other_notes", "").replace(chr(10), "<br>") + '</p>' if styling.get('other_notes') else ''}
             </div>
         </div>
         <div class="section-wrapper">
             <div class="section-header accent">📸 필수 촬영 앵글</div>
             <div class="section-body accent">
                 <p><strong>{', '.join(angle_list) if angle_list else '(미선택)'}</strong></p>
-                {'<p>' + angles.get("custom", "").replace(chr(10), "<br>") + '</p>' if angles.get('custom') else ''}
+                {'<p>' + text_to_html(angles.get("custom", "")) + '</p>' if angles.get('custom') else ''}
             </div>
         </div>
-        {'<div class="section-wrapper"><div class="section-header">🎨 톤앤매너</div><div class="section-body"><div class="info-box">' + rb.get("tone_and_manner", "") + '</div></div></div>' if rb.get('tone_and_manner') else ''}
-        {'<div class="section-wrapper"><div class="section-header">✍️ 포스팅 가이드</div><div class="section-body"><div class="info-box" style="background:#fff3cd; border-color:#ffc107;">' + rb.get("posting_guide", "") + '</div></div></div>' if rb.get('posting_guide') else ''}
+        {'<div class="section-wrapper"><div class="section-header">🎨 톤앤매너</div><div class="section-body"><div class="info-box">' + text_to_html(rb.get("tone_and_manner", "")) + '</div></div></div>' if rb.get('tone_and_manner') else ''}
+        {'<div class="section-wrapper"><div class="section-header">✍️ 포스팅 가이드</div><div class="section-body"><div class="info-box" style="background:#fff3cd; border-color:#ffc107;">' + text_to_html(rb.get("posting_guide", "")) + '</div></div></div>' if rb.get('posting_guide') else ''}
         """
     
     # 제품 정보 HTML 생성

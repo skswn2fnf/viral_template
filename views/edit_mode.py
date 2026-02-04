@@ -79,7 +79,61 @@ def ensure_product_structure(p, idx=0):
     p.setdefault('isMain', False)
     return p
 
-def load_state_from_json(json_data):
+def compress_base64_image(data_url, max_size_kb=300, max_width=800):
+    """base64 이미지를 압축하여 반환"""
+    if not data_url or not data_url.startswith('data:image'):
+        return data_url
+    
+    # 이미 작은 이미지는 그대로 반환
+    if len(data_url) / 1024 < max_size_kb:
+        return data_url
+    
+    try:
+        from PIL import Image
+        from io import BytesIO
+        
+        # base64 디코딩
+        header, b64_data = data_url.split(',', 1)
+        img_bytes = base64.b64decode(b64_data)
+        
+        # 이미지 열기
+        img = Image.open(BytesIO(img_bytes))
+        
+        # RGBA -> RGB 변환
+        if img.mode in ('RGBA', 'P'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            if len(img.split()) > 3:
+                background.paste(img, mask=img.split()[3])
+            else:
+                background.paste(img)
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # 리사이즈
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((max_width, new_height), Image.LANCZOS)
+        
+        # 압축
+        quality = 85
+        while quality >= 20:
+            buffer = BytesIO()
+            img.save(buffer, format='JPEG', quality=quality, optimize=True)
+            if len(buffer.getvalue()) / 1024 <= max_size_kb:
+                break
+            quality -= 10
+        
+        # 새 base64 반환
+        b64 = base64.b64encode(buffer.getvalue()).decode()
+        return f"data:image/jpeg;base64,{b64}"
+    except:
+        return data_url
+
+def load_state_from_json(json_data, compress_images=False):
     """JSON 데이터로부터 상태 복원"""
     try:
         data = json.loads(json_data)
@@ -98,6 +152,9 @@ def load_state_from_json(json_data):
             products = data['products']
             for idx, p in enumerate(products):
                 ensure_product_structure(p, idx)
+                # 큰 파일 불러오기 시 이미지 자동 압축
+                if compress_images and p.get('imageUrl'):
+                    p['imageUrl'] = compress_base64_image(p['imageUrl'], max_size_kb=300, max_width=800)
             st.session_state['products'] = products
         if 'legal_text' in data:
             st.session_state['legal_text'] = data['legal_text']
@@ -223,15 +280,19 @@ def render_edit_mode():
             
             # 현재 파일 크기 표시
             current_size_kb = len(json_str.encode('utf-8')) / 1024
+            current_size_mb = current_size_kb / 1024
+            
             if current_size_kb < 1024:
                 size_text = f"{current_size_kb:.1f} KB"
             else:
-                size_text = f"{current_size_kb/1024:.2f} MB"
+                size_text = f"{current_size_mb:.2f} MB"
             
-            if current_size_kb > 5120:  # 5MB 초과 시 경고
-                st.warning(f"⚠️ 현재 크기: {size_text} (권장: 5MB 이하)")
+            if current_size_mb > 50:  # 50MB 초과 시 경고
+                st.warning(f"⚠️ 현재 크기: {size_text} (50MB 초과 - 불러오기 시 느릴 수 있음)")
+            elif current_size_mb > 5:  # 5MB 초과 시 안내
+                st.info(f"📊 현재 크기: {size_text} (불러오기 시 이미지 자동 압축됨)")
             else:
-                st.caption(f"📊 현재 크기: {size_text} / 권장 최대: 5MB")
+                st.caption(f"📊 현재 크기: {size_text} / 최대 처리: 100MB")
         
         with save_col2:
             st.markdown("**📤 저장된 작업 불러오기**")
@@ -247,24 +308,36 @@ def render_edit_mode():
             if uploaded_json:
                 # 파일 크기 확인
                 file_size_mb = uploaded_json.size / 1024 / 1024
-                if file_size_mb > 10:
-                    st.error(f"❌ 파일이 너무 큽니다 ({file_size_mb:.1f}MB). 10MB 이하 파일만 불러올 수 있습니다.")
+                
+                if file_size_mb > 100:
+                    st.error(f"❌ 파일이 너무 큽니다 ({file_size_mb:.1f}MB). 최대 100MB까지 지원합니다.")
                 elif file_size_mb > 5:
-                    st.warning(f"⚠️ 파일 크기: {file_size_mb:.1f}MB - 로딩이 느릴 수 있습니다.")
-                    if st.button("📂 불러오기 실행", use_container_width=True):
-                        with st.spinner("불러오는 중... (파일이 커서 시간이 걸릴 수 있습니다)"):
-                            json_content = uploaded_json.read().decode('utf-8')
-                            success, info = load_state_from_json(json_content)
-                            if success:
-                                st.success(f"✅ 불러오기 완료! (저장 시간: {info})")
-                                time.sleep(1)
-                                st.rerun()
-                            else:
-                                st.error(f"❌ 불러오기 실패: {info}")
+                    # 큰 파일: 자동 압축 옵션 제공
+                    st.warning(f"⚠️ 파일 크기: {file_size_mb:.1f}MB")
+                    st.info("💡 이미지가 자동으로 압축되어 불러와집니다. (제품 이미지 → 300KB 이하)")
+                    
+                    if st.button("📂 불러오기 실행 (이미지 자동 압축)", use_container_width=True):
+                        progress_bar = st.progress(0, text="JSON 파일 읽는 중...")
+                        json_content = uploaded_json.read().decode('utf-8')
+                        progress_bar.progress(30, text="데이터 파싱 중...")
+                        
+                        # 큰 파일은 이미지 자동 압축 적용
+                        success, info = load_state_from_json(json_content, compress_images=True)
+                        progress_bar.progress(100, text="완료!")
+                        
+                        if success:
+                            st.success(f"✅ 불러오기 완료! (저장 시간: {info})")
+                            st.info("💾 이미지가 압축되었습니다. 다시 저장하면 파일 크기가 줄어듭니다.")
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ 불러오기 실패: {info}")
                 else:
+                    # 작은 파일: 그대로 불러오기
+                    st.caption(f"📁 파일 크기: {file_size_mb:.2f}MB")
                     if st.button("📂 불러오기 실행", use_container_width=True):
                         json_content = uploaded_json.read().decode('utf-8')
-                        success, info = load_state_from_json(json_content)
+                        success, info = load_state_from_json(json_content, compress_images=False)
                         if success:
                             st.success(f"✅ 불러오기 완료! (저장 시간: {info})")
                             time.sleep(1)

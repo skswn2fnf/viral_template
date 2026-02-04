@@ -23,26 +23,43 @@ def generate_shareable_html(state):
     platform_section = ""
     
     if platform == 'blog':
-        blog = state['blog_data']
-        title_keywords = " ".join([f'<span class="keyword">{k["text"]}</span>' for k in blog['title_keywords'] if k['text']])
-        sub_keywords = " ".join([f'<span class="keyword sub">{k["text"]}</span>' for k in blog['sub_keywords'] if k['text']])
+        blog = state.get('blog_data', {})
+        # 안전한 데이터 접근
+        blog_title_keywords = blog.get('title_keywords', [])
+        blog_sub_keywords = blog.get('sub_keywords', [])
+        blog_images = blog.get('images', {})
+        blog_story = blog.get('story', {})
+        
+        title_keywords = " ".join([f'<span class="keyword">{k.get("text", "")}</span>' for k in blog_title_keywords if k.get('text')])
+        sub_keywords = " ".join([f'<span class="keyword sub">{k.get("text", "")}</span>' for k in blog_sub_keywords if k.get('text')])
+        
+        model_note = blog_images.get('model_note', '')
+        model_count = blog_images.get('model_count', 0)
+        sns_url = blog_images.get('sns_url', '')
+        sns_count = blog_images.get('sns_count', 0)
+        mall_link = blog_images.get('mall_link', '')
+        
+        target_audience = blog_story.get('target_audience', '')
+        campaign_concept = blog_story.get('campaign_concept', '')
+        trend = blog_story.get('trend', '')
+        product_strength = blog_story.get('product_strength', '')
         
         # 자사몰 링크 섹션
         mall_link_section = ""
-        if blog['images'].get('mall_link'):
+        if mall_link:
             mall_link_section = f"""
             <div class="section-wrapper">
                 <div class="section-header">🔗 자사몰 링크</div>
                 <div class="section-body">
-                    <a href="{blog['images']['mall_link']}" target="_blank" style="color: {accent_color}; text-decoration: none; font-weight: 500;">{blog['images']['mall_link']} →</a>
+                    <a href="{mall_link}" target="_blank" style="color: {accent_color}; text-decoration: none; font-weight: 500;">{mall_link} →</a>
                 </div>
             </div>
             """
         
         # 트렌드/브랜드 설명 섹션
         trend_section = ""
-        if blog['story'].get('trend'):
-            trend_html = blog['story']['trend'].replace('\n', '<br>')
+        if trend:
+            trend_html = trend.replace('\n', '<br>')
             trend_section = f"""
             <div class="section-wrapper">
                 <div class="section-header">💡 트렌드 / 브랜드 설명</div>
@@ -54,8 +71,8 @@ def generate_shareable_html(state):
         
         # 제품 특장점 섹션
         strength_section = ""
-        if blog['story'].get('product_strength'):
-            strength_html = blog['story']['product_strength'].replace('\n', '<br>')
+        if product_strength:
+            strength_html = product_strength.replace('\n', '<br>')
             strength_section = f"""
             <div class="section-wrapper">
                 <div class="section-header">✨ 제품 특장점</div>
@@ -83,8 +100,8 @@ def generate_shareable_html(state):
             <div class="section-header">🖼️ 활용 이미지</div>
             <div class="section-body">
                 <ul>
-                    <li>{basic['model_name']} {blog['images']['model_note']} <strong>{blog['images']['model_count']}장</strong> 이상</li>
-                    {'<li>SNS 캡쳐 <strong>' + str(blog['images']['sns_count']) + '장</strong> 이상</li>' if blog['images']['sns_url'] else ''}
+                    <li>{basic.get('model_name', '')} {model_note} <strong>{model_count}장</strong> 이상</li>
+                    {'<li>SNS 캡쳐 <strong>' + str(sns_count) + '장</strong> 이상</li>' if sns_url else ''}
                 </ul>
             </div>
         </div>
@@ -92,8 +109,8 @@ def generate_shareable_html(state):
         <div class="section-wrapper">
             <div class="section-header">📖 스토리라인</div>
             <div class="section-body">
-                <p><strong>타겟</strong>: {blog['story']['target_audience']}</p>
-                {'<p><strong>컨셉</strong>: ' + blog['story']['campaign_concept'] + '</p>' if blog['story']['campaign_concept'] else ''}
+                <p><strong>타겟</strong>: {target_audience}</p>
+                {'<p><strong>컨셉</strong>: ' + campaign_concept + '</p>' if campaign_concept else ''}
             </div>
         </div>
         {trend_section}
@@ -149,6 +166,11 @@ def generate_shareable_html(state):
     
     elif platform == 'youtube':
         yt = state['youtube_data']
+        yt_content_type = yt.get('content_type', 'shorts')
+        yt_duration = yt.get('duration', '') or '자유'
+        yt_key_message = yt.get('key_message', '')
+        yt_required_mentions = yt.get('required_mentions', '')
+        
         platform_section = f"""
         <div class="section-wrapper">
             <div class="section-header">🎬 콘텐츠 스펙</div>
@@ -156,17 +178,17 @@ def generate_shareable_html(state):
                 <div class="metrics">
                     <div class="metric">
                         <span class="label">유형</span>
-                        <span class="value">{yt['content_type']}</span>
+                        <span class="value">{yt_content_type}</span>
                     </div>
                     <div class="metric">
                         <span class="label">권장 길이</span>
-                        <span class="value">{yt['duration'] or '자유'}</span>
+                        <span class="value">{yt_duration}</span>
                     </div>
                 </div>
             </div>
         </div>
-        {'<div class="section-wrapper"><div class="section-header">💬 희망 메시지</div><div class="section-body"><div class="info-box">' + yt['key_message'] + '</div></div></div>' if yt['key_message'] else ''}
-        {'<div class="section-wrapper"><div class="section-header accent">📢 필수 멘트</div><div class="section-body accent"><p><strong>' + yt['required_mentions'] + '</strong></p></div></div>' if yt.get('required_mentions') else ''}
+        {'<div class="section-wrapper"><div class="section-header">💬 희망 메시지</div><div class="section-body"><div class="info-box">' + yt_key_message + '</div></div></div>' if yt_key_message else ''}
+        {'<div class="section-wrapper"><div class="section-header accent">📢 필수 멘트</div><div class="section-body accent"><p><strong>' + yt_required_mentions + '</strong></p></div></div>' if yt_required_mentions else ''}
         """
     
     # 제품 정보 HTML 생성
@@ -691,52 +713,56 @@ def render_preview_mode():
     
     # 1. 플랫폼별 상세 가이드 (상단)
     if platform == 'blog':
-        blog = state['blog_data']
+        blog = state.get('blog_data', {})
+        blog_images = blog.get('images', {})
+        blog_story = blog.get('story', {})
+        blog_title_keywords = blog.get('title_keywords', [])
+        blog_sub_keywords = blog.get('sub_keywords', [])
         
         # 키워드 섹션
         st.markdown('<div class="section-header">🏷️ 키워드 설정</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-body">', unsafe_allow_html=True)
         st.markdown("**필수 제목 키워드**")
-        st.markdown(" ".join([f"`{k['text']}`" for k in blog['title_keywords'] if k['text']]))
+        st.markdown(" ".join([f"`{k.get('text', '')}`" for k in blog_title_keywords if k.get('text')]))
         st.markdown("**서브 키워드**")
-        st.markdown(" ".join([f"`{k['text']}`" for k in blog['sub_keywords'] if k['text']]))
+        st.markdown(" ".join([f"`{k.get('text', '')}`" for k in blog_sub_keywords if k.get('text')]))
         st.markdown('</div>', unsafe_allow_html=True)
         
         # 활용 이미지 섹션
         st.markdown('<div class="section-header">🖼️ 활용 이미지</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-body">', unsafe_allow_html=True)
-        st.markdown(f"- {basic['model_name']} {blog['images']['model_note']} **{blog['images']['model_count']}장** 이상")
-        if blog['images']['sns_url']:
-            st.markdown(f"- SNS 캡쳐 **{blog['images']['sns_count']}장** 이상")
+        st.markdown(f"- {basic.get('model_name', '')} {blog_images.get('model_note', '')} **{blog_images.get('model_count', 0)}장** 이상")
+        if blog_images.get('sns_url'):
+            st.markdown(f"- SNS 캡쳐 **{blog_images.get('sns_count', 0)}장** 이상")
         st.markdown('</div>', unsafe_allow_html=True)
         
         # 자사몰 링크 섹션
-        if blog['images'].get('mall_link'):
+        if blog_images.get('mall_link'):
             st.markdown('<div class="section-header">🔗 자사몰 링크</div>', unsafe_allow_html=True)
             st.markdown('<div class="section-body">', unsafe_allow_html=True)
-            st.markdown(f"[{blog['images']['mall_link']}]({blog['images']['mall_link']})")
+            st.markdown(f"[{blog_images.get('mall_link', '')}]({blog_images.get('mall_link', '')})")
             st.markdown('</div>', unsafe_allow_html=True)
         
         # 스토리라인 섹션
         st.markdown('<div class="section-header">📖 스토리라인</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-body">', unsafe_allow_html=True)
-        st.markdown(f"**타겟**: {blog['story']['target_audience']}")
-        if blog['story']['campaign_concept']:
-            st.markdown(f"**컨셉**: {blog['story']['campaign_concept']}")
+        st.markdown(f"**타겟**: {blog_story.get('target_audience', '')}")
+        if blog_story.get('campaign_concept'):
+            st.markdown(f"**컨셉**: {blog_story.get('campaign_concept', '')}")
         st.markdown('</div>', unsafe_allow_html=True)
         
         # 트렌드/브랜드 설명 섹션
-        if blog['story'].get('trend'):
+        if blog_story.get('trend'):
             st.markdown('<div class="section-header">💡 트렌드 / 브랜드 설명</div>', unsafe_allow_html=True)
             st.markdown('<div class="section-body">', unsafe_allow_html=True)
-            st.markdown(blog['story']['trend'])
+            st.markdown(blog_story.get('trend', ''))
             st.markdown('</div>', unsafe_allow_html=True)
         
         # 제품 특장점 섹션
-        if blog['story'].get('product_strength'):
+        if blog_story.get('product_strength'):
             st.markdown('<div class="section-header">✨ 제품 특장점</div>', unsafe_allow_html=True)
             st.markdown('<div class="section-body">', unsafe_allow_html=True)
-            st.markdown(blog['story']['product_strength'])
+            st.markdown(blog_story.get('product_strength', ''))
             st.markdown('</div>', unsafe_allow_html=True)
 
     elif platform == 'instagram':
@@ -783,21 +809,21 @@ def render_preview_mode():
         st.markdown('<div class="section-header">🎬 콘텐츠 스펙</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-body">', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
-        c1.metric("유형", yt['content_type'])
-        c2.metric("권장 길이", yt['duration'] or "자유")
+        c1.metric("유형", yt.get('content_type', 'shorts'))
+        c2.metric("권장 길이", yt.get('duration', '') or "자유")
         st.markdown('</div>', unsafe_allow_html=True)
         
-        if yt['key_message']:
+        if yt.get('key_message'):
             st.markdown('<div class="section-header">💬 희망 메시지</div>', unsafe_allow_html=True)
             st.markdown('<div class="section-body">', unsafe_allow_html=True)
-            st.info(yt['key_message'])
+            st.info(yt.get('key_message', ''))
             st.markdown('</div>', unsafe_allow_html=True)
         
         # 필수 멘트
         if yt.get('required_mentions'):
             st.markdown('<div class="section-header">📢 필수 멘트</div>', unsafe_allow_html=True)
             st.markdown('<div class="section-body-highlight">', unsafe_allow_html=True)
-            st.markdown(f"**{yt['required_mentions']}**")
+            st.markdown(f"**{yt.get('required_mentions', '')}**")
             st.markdown('</div>', unsafe_allow_html=True)
 
     # 2. 법적 문구 (파란색 하이라이트 - 중요!) - 인스타그램은 제외

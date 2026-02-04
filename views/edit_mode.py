@@ -342,20 +342,31 @@ def render_edit_mode():
         elif platform == 'instagram':
             section_header("📷", "인스타그램 설정")
             insta = st.session_state['insta_data']
+            
+            # 기존 mentions 데이터 호환성 처리
+            if 'mentions' in insta and 'brand_mention' not in insta:
+                insta['brand_mention'] = insta.get('mentions', '')
+                insta['celeb_mention'] = ''
+            if 'brand_mention' not in insta:
+                insta['brand_mention'] = ''
+            if 'celeb_mention' not in insta:
+                insta['celeb_mention'] = ''
+            
             with st.expander("📐 콘텐츠 스펙", expanded=True):
                 i_col1, i_col2 = st.columns(2)
                 insta['content_type'] = i_col1.selectbox("콘텐츠 유형", ['feed', 'reels', 'story', 'carousel'], 
                                                          index=['feed', 'reels', 'story', 'carousel'].index(insta['content_type']))
                 insta['content_size'] = i_col2.selectbox("사이즈", ['1:1', '4:5', '9:16', '1.91:1'], 
                                                          index=['1:1', '4:5', '9:16', '1.91:1'].index(insta['content_size']))
-                insta['mentions'] = st.text_input("멘션 계정", value=insta['mentions'])
+                
+                st.markdown("**📍 멘션 계정**")
+                m_col1, m_col2 = st.columns(2)
+                insta['brand_mention'] = m_col1.text_input("브랜드 계정", value=insta['brand_mention'], placeholder="@brand_official")
+                insta['celeb_mention'] = m_col2.text_input("셀럽/모델 계정", value=insta['celeb_mention'], placeholder="@celeb_official")
             
             with st.expander("🎨 톤앤매너", expanded=True):
                 insta['tone_and_manner'] = st.text_area("톤앤매너 가이드", value=insta['tone_and_manner'])
                 insta['hashtags'] = st.text_area("해시태그", value=insta['hashtags'])
-            
-            with st.expander("♻️ 2차 활용", expanded=True):
-                insta['reuse_clause'] = st.text_area("2차 활용 문구", value=insta['reuse_clause'])
 
         elif platform == 'youtube':
             section_header("🎬", "유튜브 설정")

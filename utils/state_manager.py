@@ -56,8 +56,8 @@ def init_session_state():
                 'content_size': '1:1',
                 'tone_and_manner': '',
                 'hashtags': '',
-                'reuse_clause': '본 콘텐츠는 브랜드 공식 채널에서 2차 활용될 수 있습니다.',
-                'mentions': '@sergiotacchini_kr'
+                'brand_mention': '',
+                'celeb_mention': ''
             }
             
         # Youtube Data

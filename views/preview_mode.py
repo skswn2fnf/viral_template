@@ -102,6 +102,26 @@ def generate_shareable_html(state):
     
     elif platform == 'instagram':
         insta = state['insta_data']
+        # 멘션 정보 가져오기 (호환성)
+        brand_mention = insta.get('brand_mention') or insta.get('mentions', '')
+        celeb_mention = insta.get('celeb_mention', '')
+        
+        mention_html = ""
+        if brand_mention or celeb_mention:
+            mention_items = []
+            if brand_mention:
+                mention_items.append(f'<p><strong>브랜드 계정</strong>: <code>{brand_mention}</code></p>')
+            if celeb_mention:
+                mention_items.append(f'<p><strong>셀럽/모델 계정</strong>: <code>{celeb_mention}</code></p>')
+            mention_html = f'''
+            <div class="section-wrapper">
+                <div class="section-header">📍 멘션 계정</div>
+                <div class="section-body">
+                    {"".join(mention_items)}
+                </div>
+            </div>
+            '''
+        
         platform_section = f"""
         <div class="section-wrapper">
             <div class="section-header">📐 콘텐츠 스펙</div>
@@ -116,17 +136,11 @@ def generate_shareable_html(state):
                         <span class="value">{insta['content_size']}</span>
                     </div>
                 </div>
-                <p><strong>멘션</strong>: <code>{insta['mentions']}</code></p>
             </div>
         </div>
+        {mention_html}
         {'<div class="section-wrapper"><div class="section-header">🎨 톤앤매너</div><div class="section-body"><div class="info-box">' + insta['tone_and_manner'] + '</div></div></div>' if insta['tone_and_manner'] else ''}
         {'<div class="section-wrapper"><div class="section-header">#️⃣ 해시태그</div><div class="section-body"><code style="display:block; background:#e9ecef; padding:15px; border-radius:8px; white-space:pre-wrap;">' + insta['hashtags'] + '</code></div></div>' if insta.get('hashtags') else ''}
-        <div class="section-wrapper highlight-blue">
-            <div class="section-header accent">♻️ 2차 활용</div>
-            <div class="section-body accent">
-                <p><strong>{insta['reuse_clause']}</strong></p>
-            </div>
-        </div>
         """
     
     elif platform == 'youtube':
@@ -197,6 +211,9 @@ def generate_shareable_html(state):
     
     # 법적 문구
     final_legal = state['legal_text'].replace('{브랜드명}', basic['brand_name'])
+    
+    # 포스팅 기한 접미사 (인스타그램은 "이후" 제거)
+    deadline_suffix = "" if platform == 'instagram' else " 이후"
     
     # 생성 날짜
     generated_date = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -557,7 +574,7 @@ def generate_shareable_html(state):
         
         <div class="content">
             <div class="deadline">
-                📅 <strong>포스팅 기한</strong>: {basic['posting_date']} {basic['posting_time']} 이후
+                📅 <strong>포스팅 기한</strong>: {basic['posting_date']} {basic['posting_time']}{deadline_suffix}
             </div>
             
             {f'''<div class="section-wrapper">
@@ -570,12 +587,12 @@ def generate_shareable_html(state):
             
             {platform_section}
             
-            <div class="legal-section">
+            {f'''<div class="legal-section">
                 <div class="legal-header">⚖️ 필수 기재 문구</div>
                 <div class="legal-body">
                     <code>{final_legal}</code>
                 </div>
-            </div>
+            </div>''' if platform != 'instagram' else ''}
             
             <div class="products-section">
                 <div class="products-header">📦 제품 정보</div>
@@ -638,10 +655,11 @@ def render_preview_mode():
     </div>
     """, unsafe_allow_html=True)
 
-    # 포스팅 기한 (파란색 하이라이트)
+    # 포스팅 기한 (파란색 하이라이트) - 인스타그램은 "이후" 제거
+    deadline_suffix = "" if platform == 'instagram' else " 이후"
     st.markdown(f"""
     <div style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px; color: #1565c0; border-left: 4px solid #1976d2;">
-        📅 <strong>포스팅 기한</strong>: {basic['posting_date']} {basic['posting_time']} 이후
+        📅 <strong>포스팅 기한</strong>: {basic['posting_date']} {basic['posting_time']}{deadline_suffix}
     </div>
     """, unsafe_allow_html=True)
 
@@ -726,8 +744,19 @@ def render_preview_mode():
         c1, c2 = st.columns(2)
         c1.metric("유형", insta['content_type'])
         c2.metric("사이즈", insta['content_size'])
-        st.markdown(f"**멘션**: `{insta['mentions']}`")
         st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 멘션 계정
+        brand_mention = insta.get('brand_mention') or insta.get('mentions', '')
+        celeb_mention = insta.get('celeb_mention', '')
+        if brand_mention or celeb_mention:
+            st.markdown('<div class="section-header">📍 멘션 계정</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-body">', unsafe_allow_html=True)
+            if brand_mention:
+                st.markdown(f"**브랜드 계정**: `{brand_mention}`")
+            if celeb_mention:
+                st.markdown(f"**셀럽/모델 계정**: `{celeb_mention}`")
+            st.markdown('</div>', unsafe_allow_html=True)
         
         # 톤앤매너
         if insta['tone_and_manner']:
@@ -742,12 +771,6 @@ def render_preview_mode():
             st.markdown('<div class="section-body">', unsafe_allow_html=True)
             st.code(insta['hashtags'], language=None)
             st.markdown('</div>', unsafe_allow_html=True)
-            
-        # 2차 활용 (파란색 하이라이트)
-        st.markdown('<div class="section-header">♻️ 2차 활용</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-body-highlight">', unsafe_allow_html=True)
-        st.markdown(f"**{insta['reuse_clause']}**")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     elif platform == 'youtube':
         yt = state['youtube_data']
@@ -773,16 +796,17 @@ def render_preview_mode():
             st.markdown(f"**{yt['required_mentions']}**")
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. 법적 문구 (파란색 하이라이트 - 중요!)
-    final_legal = state['legal_text'].replace('{브랜드명}', basic['brand_name'])
-    st.markdown(f"""
-    <div style="background-color: #1976d2; color: white; padding: 10px 15px; border-radius: 6px 6px 0 0; margin-top: 15px; font-weight: 600;">
-        ⚖️ 필수 기재 문구
-    </div>
-    <div style="background-color: #e3f2fd; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 20px; border: 1px solid #90caf9; border-top: none;">
-        <code style="display:block; padding:15px; background:white; border-radius:5px; color: #1565c0; font-weight: 500;">{final_legal}</code>
-    </div>
-    """, unsafe_allow_html=True)
+    # 2. 법적 문구 (파란색 하이라이트 - 중요!) - 인스타그램은 제외
+    if platform != 'instagram':
+        final_legal = state['legal_text'].replace('{브랜드명}', basic['brand_name'])
+        st.markdown(f"""
+        <div style="background-color: #1976d2; color: white; padding: 10px 15px; border-radius: 6px 6px 0 0; margin-top: 15px; font-weight: 600;">
+            ⚖️ 필수 기재 문구
+        </div>
+        <div style="background-color: #e3f2fd; padding: 20px; border-radius: 0 0 6px 6px; margin-bottom: 20px; border: 1px solid #90caf9; border-top: none;">
+            <code style="display:block; padding:15px; background:white; border-radius:5px; color: #1565c0; font-weight: 500;">{final_legal}</code>
+        </div>
+        """, unsafe_allow_html=True)
 
     # 3. 제품 정보 (하단)
     st.markdown("""

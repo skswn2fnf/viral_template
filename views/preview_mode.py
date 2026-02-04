@@ -105,6 +105,10 @@ def generate_shareable_html(state):
         # 멘션 정보 가져오기 (호환성)
         brand_mention = insta.get('brand_mention') or insta.get('mentions', '')
         celeb_mention = insta.get('celeb_mention', '')
+        content_type = insta.get('content_type', 'feed')
+        content_size = insta.get('content_size', '1:1')
+        tone_manner = insta.get('tone_and_manner', '')
+        hashtags = insta.get('hashtags', '')
         
         mention_html = ""
         if brand_mention or celeb_mention:
@@ -129,18 +133,18 @@ def generate_shareable_html(state):
                 <div class="metrics">
                     <div class="metric">
                         <span class="label">유형</span>
-                        <span class="value">{insta['content_type']}</span>
+                        <span class="value">{content_type}</span>
                     </div>
                     <div class="metric">
                         <span class="label">사이즈</span>
-                        <span class="value">{insta['content_size']}</span>
+                        <span class="value">{content_size}</span>
                     </div>
                 </div>
             </div>
         </div>
         {mention_html}
-        {'<div class="section-wrapper"><div class="section-header">🎨 톤앤매너</div><div class="section-body"><div class="info-box">' + insta['tone_and_manner'] + '</div></div></div>' if insta['tone_and_manner'] else ''}
-        {'<div class="section-wrapper"><div class="section-header">#️⃣ 해시태그</div><div class="section-body"><code style="display:block; background:#e9ecef; padding:15px; border-radius:8px; white-space:pre-wrap;">' + insta['hashtags'] + '</code></div></div>' if insta.get('hashtags') else ''}
+        {'<div class="section-wrapper"><div class="section-header">🎨 톤앤매너</div><div class="section-body"><div class="info-box">' + tone_manner + '</div></div></div>' if tone_manner else ''}
+        {'<div class="section-wrapper"><div class="section-header">#️⃣ 해시태그</div><div class="section-body"><code style="display:block; background:#e9ecef; padding:15px; border-radius:8px; white-space:pre-wrap;">' + hashtags + '</code></div></div>' if hashtags else ''}
         """
     
     elif platform == 'youtube':
@@ -742,8 +746,8 @@ def render_preview_mode():
         st.markdown('<div class="section-header">📐 콘텐츠 스펙</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-body">', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
-        c1.metric("유형", insta['content_type'])
-        c2.metric("사이즈", insta['content_size'])
+        c1.metric("유형", insta.get('content_type', 'feed'))
+        c2.metric("사이즈", insta.get('content_size', '1:1'))
         st.markdown('</div>', unsafe_allow_html=True)
         
         # 멘션 계정
@@ -759,17 +763,17 @@ def render_preview_mode():
             st.markdown('</div>', unsafe_allow_html=True)
         
         # 톤앤매너
-        if insta['tone_and_manner']:
+        if insta.get('tone_and_manner'):
             st.markdown('<div class="section-header">🎨 톤앤매너</div>', unsafe_allow_html=True)
             st.markdown('<div class="section-body">', unsafe_allow_html=True)
-            st.info(insta['tone_and_manner'])
+            st.info(insta.get('tone_and_manner', ''))
             st.markdown('</div>', unsafe_allow_html=True)
         
         # 해시태그
         if insta.get('hashtags'):
             st.markdown('<div class="section-header">#️⃣ 해시태그</div>', unsafe_allow_html=True)
             st.markdown('<div class="section-body">', unsafe_allow_html=True)
-            st.code(insta['hashtags'], language=None)
+            st.code(insta.get('hashtags', ''), language=None)
             st.markdown('</div>', unsafe_allow_html=True)
 
     elif platform == 'youtube':
